@@ -1,0 +1,8 @@
+go 1.25.8
+
+use (
+	./packages/inventory-command
+	./packages/inventory-shared
+	./packages/inventory-query
+	./packages/inventory-worker
+)

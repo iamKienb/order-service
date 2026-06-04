@@ -1,0 +1,30 @@
+{
+  "settings": {
+    "number_of_shards": 2,
+    "number_of_replicas": 1,
+    "analysis": {
+      "normalizer": {
+        "standard_normalizer": {
+          "type": "custom",
+          "filter": ["lowercase", "asciifolding"]
+        }
+      }
+    }
+  },
+  "mappings": {
+    "dynamic": true,
+    "properties": {
+      "inventory_id": { "type": "keyword" },
+      "sku_id": { "type": "keyword" },
+      "shop_id": { "type": "keyword" },
+      "quantity": { "type": "long" },
+      "reserved": { "type": "long" },
+      "available": { "type": "long" },
+      "status": {
+        "type": "keyword",
+        "normalizer": "standard_normalizer"
+      },
+      "updated_at": { "type": "date" }
+    }
+  }
+}
