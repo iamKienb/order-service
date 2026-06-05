@@ -15,7 +15,10 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-const reserveStockFailedReason = "RESERVE_STOCK_FAILED"
+const (
+	reserveStockFailedReason = "RESERVE_STOCK_FAILED"
+	FulfillStockFailedReason = "FULFILL_STOCK_FAILED"
+)
 
 type OrderActivity struct {
 	service         app_order.Service
@@ -28,6 +31,11 @@ type ReserveStockCommand struct {
 	ShopID  string
 	OrderID string
 	Items   []place_order.ReserveItem
+}
+
+type SystemCancelOrderCommand struct {
+	OrderID string
+	Reason  string
 }
 
 func NewOrderActivity(
@@ -62,11 +70,23 @@ func (a *OrderActivity) CancelOrder(ctx context.Context, cmd cancel_order.Comman
 }
 
 func (a *OrderActivity) CancelPlacedOrder(ctx context.Context, orderID string) error {
+	return a.CancelOrderBySystem(ctx, SystemCancelOrderCommand{
+		OrderID: orderID,
+		Reason:  reserveStockFailedReason,
+	})
+}
+
+func (a *OrderActivity) CancelOrderBySystem(ctx context.Context, cmd SystemCancelOrderCommand) error {
+	reason := cmd.Reason
+	if reason == "" {
+		reason = reserveStockFailedReason
+	}
+
 	_, err := a.service.CancelOrder(ctx, cancel_order.Command{
-		OrderID:   orderID,
+		OrderID:   cmd.OrderID,
 		ActorID:   shared.SystemID,
 		ActorType: domain_order.ActorSystem,
-		Reason:    reserveStockFailedReason,
+		Reason:    reason,
 	})
 	return err
 }
