@@ -1,8 +1,0 @@
-go 1.25.8
-
-use (
-	./packages/order-command
-	./packages/order-query
-	./packages/order-shared
-	./packages/order-worker
-)
