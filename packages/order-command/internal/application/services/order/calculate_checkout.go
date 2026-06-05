@@ -1,11 +1,13 @@
 package order
 
 import (
-	"fmt"
+	"math"
 
 	"order-command-module/internal/application/port"
 	domain_shared "order-command-module/internal/domain/shared"
 )
+
+const productSkuStatusActive = "ACTIVE"
 
 type checkoutLineInput struct {
 	SkuID    domain_shared.SkuID
@@ -39,12 +41,12 @@ func (r checkoutLinesResult) HasUnavailableLine() bool {
 	return false
 }
 
-func (s *orderService) calculateCheckoutPreview(items []checkoutLineInput, productSkus []*port.ProductSkuDetail, skuStocks []*port.SkuStock) (*checkoutLinesResult, error) {
-	return s.buildCheckoutLines(items, productSkus, skuStocks)
+func (s *orderService) calculateCheckoutPreview(shopID domain_shared.ShopID, items []checkoutLineInput, productSkus []*port.ProductSkuDetail, skuStocks []*port.SkuStock) (*checkoutLinesResult, error) {
+	return s.buildCheckoutLines(shopID, items, productSkus, skuStocks)
 }
 
-func (s *orderService) calculateOrderPlacement(items []checkoutLineInput, productSkus []*port.ProductSkuDetail, skuStocks []*port.SkuStock) (*checkoutLinesResult, error) {
-	result, err := s.buildCheckoutLines(items, productSkus, skuStocks)
+func (s *orderService) calculateOrderPlacement(shopID domain_shared.ShopID, items []checkoutLineInput, productSkus []*port.ProductSkuDetail, skuStocks []*port.SkuStock) (*checkoutLinesResult, error) {
+	result, err := s.buildCheckoutLines(shopID, items, productSkus, skuStocks)
 	if err != nil {
 		return nil, err
 	}
@@ -54,14 +56,23 @@ func (s *orderService) calculateOrderPlacement(items []checkoutLineInput, produc
 	return result, nil
 }
 
-func (s *orderService) buildCheckoutLines(items []checkoutLineInput, productSkus []*port.ProductSkuDetail, skuStocks []*port.SkuStock) (*checkoutLinesResult, error) {
+func (s *orderService) buildCheckoutLines(shopID domain_shared.ShopID, items []checkoutLineInput, productSkus []*port.ProductSkuDetail, skuStocks []*port.SkuStock) (*checkoutLinesResult, error) {
 	stockMap := make(map[domain_shared.SkuID]*port.SkuStock, len(skuStocks))
 	for _, stock := range skuStocks {
+		if _, exists := stockMap[stock.SkuID]; exists {
+			return nil, ErrCheckoutItemInvalid
+		}
 		stockMap[stock.SkuID] = stock
 	}
 
 	productMap := make(map[domain_shared.SkuID]*port.ProductSkuDetail, len(productSkus))
 	for _, productSku := range productSkus {
+		if productSku.ShopID != shopID || productSku.Status != productSkuStatusActive || productSku.Price < 0 {
+			return nil, ErrCheckoutItemInvalid
+		}
+		if _, exists := productMap[productSku.SkuID]; exists {
+			return nil, ErrCheckoutItemInvalid
+		}
 		productMap[productSku.SkuID] = productSku
 	}
 
@@ -69,17 +80,27 @@ func (s *orderService) buildCheckoutLines(items []checkoutLineInput, productSkus
 	lines := make([]checkoutLine, 0, len(items))
 
 	for _, item := range items {
+		if item.Quantity <= 0 {
+			return nil, ErrCheckoutItemInvalid
+		}
+
 		productInfo, exists := productMap[item.SkuID]
 		if !exists {
-			return nil, fmt.Errorf("%w: product sku missing", ErrCheckoutItemInvalid)
+			return nil, ErrCheckoutItemInvalid
 		}
 
 		stockInfo, exists := stockMap[item.SkuID]
 		if !exists {
-			return nil, fmt.Errorf("%w: stock sku missing", ErrCheckoutItemInvalid)
+			return nil, ErrCheckoutItemInvalid
+		}
+		if productInfo.Price > math.MaxInt64/item.Quantity {
+			return nil, ErrCheckoutItemInvalid
 		}
 
 		subtotal := productInfo.Price * item.Quantity
+		if grandTotal > math.MaxInt64-subtotal {
+			return nil, ErrCheckoutItemInvalid
+		}
 		lines = append(lines, checkoutLine{
 			SkuID:             item.SkuID,
 			ProductID:         productInfo.ProductID,

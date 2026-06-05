@@ -40,7 +40,7 @@ func (s *orderService) PlaceOrder(ctx context.Context, cmd place_order.Command, 
 		return nil, err
 	}
 
-	calcResult, err := s.calculateOrderPlacement(normalizedItems, checkoutCtx.ProductSkus, checkoutCtx.SkuStocks)
+	calcResult, err := s.calculateOrderPlacement(cmd.ShopID, normalizedItems, checkoutCtx.ProductSkus, checkoutCtx.SkuStocks)
 	if err != nil {
 		return nil, err
 	}

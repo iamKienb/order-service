@@ -2,7 +2,6 @@ package order
 
 import (
 	"context"
-	"fmt"
 
 	"order-command-module/internal/application/commands/preview_checkout"
 )
@@ -17,14 +16,14 @@ func (s *orderService) PreviewCheckout(ctx context.Context, cmd preview_checkout
 		return nil, err
 	}
 
-	calcResult, err := s.calculateCheckoutPreview(normalizedItems, checkoutCtx.ProductSkus, checkoutCtx.SkuStocks)
+	calcResult, err := s.calculateCheckoutPreview(cmd.ShopID, normalizedItems, checkoutCtx.ProductSkus, checkoutCtx.SkuStocks)
 	if err != nil {
 		return nil, err
 	}
 
 	for _, item := range calcResult.Lines {
 		if item.AvailableQuantity < item.Quantity {
-			return nil, fmt.Errorf("%w: %s", ErrCheckoutItemUnavailable, item.ProductName)
+			return nil, ErrCheckoutItemUnavailable
 		}
 	}
 
