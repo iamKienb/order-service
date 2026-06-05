@@ -2,6 +2,7 @@ package activity
 
 import (
 	"context"
+	"errors"
 
 	"order-command-module/internal/application/commands/cancel_order"
 	"order-command-module/internal/application/commands/confirm_order"
@@ -53,6 +54,14 @@ func NewOrderActivity(
 }
 
 func (a *OrderActivity) CreateOrder(ctx context.Context, cmd place_order.Command) (*place_order.Result, error) {
+	existing, err := a.service.FindExistingPlaceOrder(ctx, cmd)
+	if err == nil {
+		return existing, nil
+	}
+	if !errors.Is(err, domain_order.ErrOrderNotFound) {
+		return nil, err
+	}
+
 	checkoutCtx, err := a.checkoutContext(ctx, cmd)
 	if err != nil {
 		return nil, err

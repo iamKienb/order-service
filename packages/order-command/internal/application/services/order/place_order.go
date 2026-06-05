@@ -15,26 +15,14 @@ import (
 const defaultCurrency = "VND"
 
 func (s *orderService) PlaceOrder(ctx context.Context, cmd place_order.Command, checkoutCtx preview_checkout.CheckoutContext) (*place_order.Result, error) {
-	idempotencyKey := strings.TrimSpace(cmd.IdempotencyKey)
-	if idempotencyKey == "" {
-		return nil, ErrOrderIdempotencyMissing
-	}
-
-	baseItems := make([]checkoutLineInput, 0, len(cmd.Items))
-	for _, item := range cmd.Items {
-		baseItems = append(baseItems, checkoutLineInput{SkuID: item.SkuID, Quantity: item.Quantity})
-	}
-	normalizedItems, err := normalizeCheckoutItems(baseItems)
+	idempotencyKey, normalizedItems, err := normalizePlaceOrderRequest(cmd)
 	if err != nil {
 		return nil, err
 	}
 
-	existing, err := s.orderRepo.GetOrderByBuyerAndIdempotencyKey(ctx, cmd.BuyerID, idempotencyKey)
+	existingResult, err := s.findExistingPlaceOrder(ctx, cmd, idempotencyKey, normalizedItems)
 	if err == nil {
-		if !matchesPlaceOrderRequest(existing, cmd.ShopID, normalizedItems) {
-			return nil, domain_order.ErrOrderIdempotencyKeyConflict
-		}
-		return placeOrderResultFromOrder(existing), nil
+		return existingResult, nil
 	}
 	if !errors.Is(err, domain_order.ErrOrderNotFound) {
 		return nil, err
@@ -99,6 +87,44 @@ func (s *orderService) PlaceOrder(ctx context.Context, cmd place_order.Command, 
 	}
 
 	return placeOrderResultFromOrder(newOrder), nil
+}
+
+func (s *orderService) FindExistingPlaceOrder(ctx context.Context, cmd place_order.Command) (*place_order.Result, error) {
+	idempotencyKey, normalizedItems, err := normalizePlaceOrderRequest(cmd)
+	if err != nil {
+		return nil, err
+	}
+
+	return s.findExistingPlaceOrder(ctx, cmd, idempotencyKey, normalizedItems)
+}
+
+func normalizePlaceOrderRequest(cmd place_order.Command) (string, []checkoutLineInput, error) {
+	idempotencyKey := strings.TrimSpace(cmd.IdempotencyKey)
+	if idempotencyKey == "" {
+		return "", nil, ErrOrderIdempotencyMissing
+	}
+
+	baseItems := make([]checkoutLineInput, 0, len(cmd.Items))
+	for _, item := range cmd.Items {
+		baseItems = append(baseItems, checkoutLineInput{SkuID: item.SkuID, Quantity: item.Quantity})
+	}
+	normalizedItems, err := normalizeCheckoutItems(baseItems)
+	if err != nil {
+		return "", nil, err
+	}
+
+	return idempotencyKey, normalizedItems, nil
+}
+
+func (s *orderService) findExistingPlaceOrder(ctx context.Context, cmd place_order.Command, idempotencyKey string, normalizedItems []checkoutLineInput) (*place_order.Result, error) {
+	existing, err := s.orderRepo.GetOrderByBuyerAndIdempotencyKey(ctx, cmd.BuyerID, idempotencyKey)
+	if err != nil {
+		return nil, err
+	}
+	if !matchesPlaceOrderRequest(existing, cmd.ShopID, normalizedItems) {
+		return nil, domain_order.ErrOrderIdempotencyKeyConflict
+	}
+	return placeOrderResultFromOrder(existing), nil
 }
 
 func placeOrderResultFromOrder(order *domain_order.Order) *place_order.Result {

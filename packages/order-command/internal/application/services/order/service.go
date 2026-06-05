@@ -14,6 +14,7 @@ import (
 
 type Service interface {
 	PreviewCheckout(ctx context.Context, cmd preview_checkout.Command, checkoutCtx preview_checkout.CheckoutContext) (*preview_checkout.Result, error)
+	FindExistingPlaceOrder(ctx context.Context, cmd place_order.Command) (*place_order.Result, error)
 	PlaceOrder(ctx context.Context, cmd place_order.Command, checkoutCtx preview_checkout.CheckoutContext) (*place_order.Result, error)
 	ConfirmOrder(ctx context.Context, cmd confirm_order.Command) (*confirm_order.Result, error)
 	CancelOrder(ctx context.Context, cmd cancel_order.Command) (*cancel_order.Result, error)
