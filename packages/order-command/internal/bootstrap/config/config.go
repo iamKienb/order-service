@@ -14,13 +14,15 @@ type TemporalConfig struct {
 	RollbackTimeout time.Duration `env:"TEMPORAL_ROLLBACK_TIMEOUT"`
 }
 
-type ApiConfig struct {
-	APIGatewayAddr string `env:"API_GATEWAY_SERVICE_ADDR"`
+type UpstreamConfig struct {
+	UserCommandURL      string `env:"USER_COMMAND_URL" envDefault:"http://localhost:8001"`
+	ProductQueryURL     string `env:"PRODUCT_QUERY_URL" envDefault:"http://localhost:8103"`
+	InventoryCommandURL string `env:"INVENTORY_COMMAND_URL" envDefault:"http://localhost:8004"`
 }
 
 type OrderCommandConfig struct {
 	Postgres configx.PostgresConfig `envPrefix:"ORDER_COMMAND_SERVICE"`
 	Server   configx.Server         `envPrefix:"ORDER_COMMAND_SERVICE"`
 	Temporal TemporalConfig         `envPrefix:"ORDER_COMMAND_SERVICE"`
-	Gateway  ApiConfig              `envPrefix:"ORDER_COMMAND_SERVICE"`
+	Upstream UpstreamConfig         `envPrefix:"ORDER_COMMAND_SERVICE"`
 }

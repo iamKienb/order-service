@@ -65,9 +65,9 @@ func NewInfraModule(ctx context.Context, cfg *config.OrderCommandConfig) (*Infra
 		PGService:       pgService,
 		OrderRepo:       orderRepo,
 		OutboxRepo:      outboxRepo,
-		UserClient:      grpc_client.NewUserClient(httpClient, cfg.Gateway.APIGatewayAddr),
-		ProductClient:   grpc_client.NewProductClient(httpClient, cfg.Gateway.APIGatewayAddr),
-		InventoryClient: grpc_client.NewInventoryClient(httpClient, cfg.Gateway.APIGatewayAddr),
+		UserClient:      grpc_client.NewUserClient(httpClient, cfg.Upstream.UserCommandURL),
+		ProductClient:   grpc_client.NewProductClient(httpClient, cfg.Upstream.ProductQueryURL),
+		InventoryClient: grpc_client.NewInventoryClient(httpClient, cfg.Upstream.InventoryCommandURL),
 		TxManager:       txManager,
 		WorkflowRunner:  runner.NewWorkflowRunner(temporalClient, cfg.Temporal),
 	}, nil
