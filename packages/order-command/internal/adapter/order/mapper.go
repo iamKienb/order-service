@@ -1,6 +1,8 @@
 package order
 
 import (
+	"strings"
+
 	"order-command-module/internal/application/commands/cancel_order"
 	"order-command-module/internal/application/commands/confirm_order"
 	"order-command-module/internal/application/commands/place_order"
@@ -18,12 +20,14 @@ const (
 	errCodeShopInvalid        = "shop_invalid"
 	errCodeSkuInvalid         = "sku_invalid"
 	errCodeActorInvalid       = "actor_invalid"
+	errCodeIdempotencyInvalid = "idempotency_key_invalid"
 
 	errMsgBuyerInvalid       = "invalid buyer id"
 	errMsgUserAddressInvalid = "invalid user address id"
 	errMsgShopInvalid        = "invalid shop id"
 	errMsgSkuInvalid         = "invalid sku id"
 	errMsgActorInvalid       = "invalid actor id"
+	errMsgIdempotencyInvalid = "invalid idempotency key"
 )
 
 func ToPreviewCheckoutCommand(req *orderpb.PreviewCheckoutRequest) (preview_checkout.Command, error) {
@@ -93,6 +97,11 @@ func ToPlaceOrderCommand(req *orderpb.PlaceOrderRequest) (place_order.Command, e
 		return place_order.Command{}, err
 	}
 
+	idempotencyKey := strings.TrimSpace(req.GetIdempotencyKey())
+	if idempotencyKey == "" {
+		return place_order.Command{}, app_error.New(app_error.KindValidation, errCodeIdempotencyInvalid, errMsgIdempotencyInvalid, nil)
+	}
+
 	items := make([]place_order.Item, 0, len(req.GetItems()))
 	for _, item := range req.GetItems() {
 		skuID, err := parseID[shared.SkuID](item.GetSkuId(), errCodeSkuInvalid, errMsgSkuInvalid)
@@ -111,12 +120,21 @@ func ToPlaceOrderCommand(req *orderpb.PlaceOrderRequest) (place_order.Command, e
 		ShopID:         shopID,
 		BuyerID:        buyerID,
 		BuyerAddressID: addressID,
+		IdempotencyKey: idempotencyKey,
 		Items:          items,
 	}, nil
 }
 
 func ToPlaceOrderResponse(result *place_order.Result) *orderpb.PlaceOrderResponse {
-	return &orderpb.PlaceOrderResponse{Success: result != nil}
+	if result == nil {
+		return &orderpb.PlaceOrderResponse{Success: false}
+	}
+
+	return &orderpb.PlaceOrderResponse{
+		Success: true,
+		OrderId: result.OrderID,
+		Status:  result.Status,
+	}
 }
 
 func ToCancelOrderCommand(req *orderpb.CancelOrderRequest) (cancel_order.Command, error) {

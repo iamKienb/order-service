@@ -8,6 +8,7 @@ import (
 type NewOrderParams struct {
 	ShopID           shared.ShopID
 	BuyerID          shared.UserID
+	IdempotencyKey   string
 	ShippingName     string
 	ShippingPhone    string
 	ShippingAddress  string

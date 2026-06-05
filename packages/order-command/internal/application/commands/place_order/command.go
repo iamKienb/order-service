@@ -16,6 +16,7 @@ type Command struct {
 	ShopID         shared.ShopID
 	BuyerID        shared.UserID
 	BuyerAddressID shared.UserAddressID
+	IdempotencyKey string
 	Items          []Item
 }
 

@@ -6,9 +6,10 @@ require (
 	connectrpc.com/connect v1.19.2
 	connectrpc.com/grpcreflect v1.3.0
 	github.com/google/uuid v1.6.0
-	github.com/iamKienb/api-contract v0.2.11
+	github.com/iamKienb/api-contract v0.2.14
 	github.com/iamKienb/go-core v0.4.7
 	github.com/jackc/pgx/v5 v5.9.1
+	go.temporal.io/api v1.54.0
 	go.temporal.io/sdk v1.38.0
 	golang.org/x/net v0.52.0
 	golang.org/x/sync v0.20.0
@@ -44,7 +45,6 @@ require (
 	go.opentelemetry.io/otel v1.43.0 // indirect
 	go.opentelemetry.io/otel/metric v1.43.0 // indirect
 	go.opentelemetry.io/otel/trace v1.43.0 // indirect
-	go.temporal.io/api v1.54.0 // indirect
 	golang.org/x/sys v0.42.0 // indirect
 	golang.org/x/text v0.35.0 // indirect
 	golang.org/x/time v0.3.0 // indirect

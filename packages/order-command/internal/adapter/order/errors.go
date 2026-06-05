@@ -17,6 +17,9 @@ const (
 	errCodeOrderCannotCancel        = "order_cannot_cancel"
 	errCodeOrderActorInvalid        = "order_actor_invalid"
 	errCodeOrderActorActionRejected = "order_actor_action_rejected"
+	errCodeOrderNotFound            = "order_not_found"
+	errCodeOrderIdempotencyMissing  = "order_idempotency_key_missing"
+	errCodeOrderIdempotencyConflict = "order_idempotency_key_conflict"
 
 	errMsgCheckoutItemInvalid      = "checkout item is invalid"
 	errMsgCheckoutItemUnavailable  = "checkout item is unavailable"
@@ -25,6 +28,9 @@ const (
 	errMsgOrderCannotCancel        = "order cannot be cancelled"
 	errMsgOrderActorInvalid        = "order actor is invalid"
 	errMsgOrderActorActionRejected = "order actor is not allowed to perform this action"
+	errMsgOrderNotFound            = "order not found"
+	errMsgOrderIdempotencyMissing  = "order idempotency key is required"
+	errMsgOrderIdempotencyConflict = "order idempotency key is already used by a different request"
 )
 
 func mapError(err error) error {
@@ -35,6 +41,12 @@ func mapError(err error) error {
 		return app_error.New(app_error.KindConflict, errCodeCheckoutItemUnavailable, errMsgCheckoutItemUnavailable, err)
 	case errors.Is(err, app_order.ErrOrderShopMismatch):
 		return app_error.New(app_error.KindForbidden, errCodeOrderShopMismatch, errMsgOrderShopMismatch, err)
+	case errors.Is(err, app_order.ErrOrderIdempotencyMissing):
+		return app_error.New(app_error.KindValidation, errCodeOrderIdempotencyMissing, errMsgOrderIdempotencyMissing, err)
+	case errors.Is(err, domain_order.ErrOrderNotFound):
+		return app_error.New(app_error.KindNotFound, errCodeOrderNotFound, errMsgOrderNotFound, err)
+	case errors.Is(err, domain_order.ErrOrderIdempotencyKeyConflict):
+		return app_error.New(app_error.KindConflict, errCodeOrderIdempotencyConflict, errMsgOrderIdempotencyConflict, err)
 	case errors.Is(err, domain_order.ErrOrderInvalidStateTransition):
 		return app_error.New(app_error.KindConflict, errCodeOrderInvalidTransition, errMsgOrderInvalidTransition, err)
 	case errors.Is(err, domain_order.ErrOrderCannotCancel):

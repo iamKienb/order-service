@@ -20,10 +20,11 @@ const (
 )
 
 type Order struct {
-	ID      string
-	ShopID  shared.ShopID
-	BuyerID shared.UserID
-	Status  OrderStatus
+	ID             string
+	ShopID         shared.ShopID
+	BuyerID        shared.UserID
+	IdempotencyKey string
+	Status         OrderStatus
 
 	ShippingName     string
 	ShippingPhone    string
@@ -58,10 +59,11 @@ func NewOrder(params NewOrderParams) *Order {
 	now := time.Now().UTC()
 
 	return &Order{
-		ID:      orderID,
-		ShopID:  params.ShopID,
-		BuyerID: params.BuyerID,
-		Status:  StatusPending,
+		ID:             orderID,
+		ShopID:         params.ShopID,
+		BuyerID:        params.BuyerID,
+		IdempotencyKey: params.IdempotencyKey,
+		Status:         StatusPending,
 
 		ShippingName:     params.ShippingName,
 		ShippingPhone:    params.ShippingPhone,

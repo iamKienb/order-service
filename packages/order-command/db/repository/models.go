@@ -30,6 +30,7 @@ type Order struct {
 	CancelledAt      pgtype.Timestamptz
 	FailedAt         pgtype.Timestamptz
 	CreatedAt        pgtype.Timestamptz
+	IdempotencyKey   pgtype.Text
 }
 
 type OrderHistory struct {

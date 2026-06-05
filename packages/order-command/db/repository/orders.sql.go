@@ -16,6 +16,7 @@ INSERT INTO orders (
     id,
     shop_id,
     buyer_id,
+    idempotency_key,
     status,
     shipping_name,
     shipping_phone,
@@ -45,17 +46,18 @@ INSERT INTO orders (
     $8::text,
     $9::text,
     $10::text,
-    $11::bigint,
-    $12::text,
+    $11::text,
+    $12::bigint,
     $13::text,
-    $14::uuid,
-    $15::timestamptz,
+    $14::text,
+    $15::uuid,
     $16::timestamptz,
     $17::timestamptz,
     $18::timestamptz,
     $19::timestamptz,
     $20::timestamptz,
-    $21::timestamptz
+    $21::timestamptz,
+    $22::timestamptz
 )
 `
 
@@ -63,6 +65,7 @@ type CreateOrderParams struct {
 	ID               string
 	ShopID           pgtype.UUID
 	BuyerID          pgtype.UUID
+	IdempotencyKey   string
 	Status           string
 	ShippingName     string
 	ShippingPhone    string
@@ -88,6 +91,7 @@ func (q *Queries) CreateOrder(ctx context.Context, arg CreateOrderParams) error 
 		arg.ID,
 		arg.ShopID,
 		arg.BuyerID,
+		arg.IdempotencyKey,
 		arg.Status,
 		arg.ShippingName,
 		arg.ShippingPhone,
@@ -110,8 +114,51 @@ func (q *Queries) CreateOrder(ctx context.Context, arg CreateOrderParams) error 
 	return err
 }
 
+const getOrderByBuyerAndIdempotencyKey = `-- name: GetOrderByBuyerAndIdempotencyKey :one
+SELECT id, shop_id, buyer_id, status, shipping_name, shipping_phone, shipping_address, shipping_province, shipping_ward, note, grand_total, currency, cancel_reason, cancelled_by, confirmed_at, delivered_at, shipped_at, completed_at, cancelled_at, failed_at, created_at, idempotency_key
+FROM orders
+WHERE buyer_id = $1::uuid
+  AND idempotency_key = $2::text
+LIMIT 1
+`
+
+type GetOrderByBuyerAndIdempotencyKeyParams struct {
+	BuyerID        pgtype.UUID
+	IdempotencyKey string
+}
+
+func (q *Queries) GetOrderByBuyerAndIdempotencyKey(ctx context.Context, arg GetOrderByBuyerAndIdempotencyKeyParams) (Order, error) {
+	row := q.db.QueryRow(ctx, getOrderByBuyerAndIdempotencyKey, arg.BuyerID, arg.IdempotencyKey)
+	var i Order
+	err := row.Scan(
+		&i.ID,
+		&i.ShopID,
+		&i.BuyerID,
+		&i.Status,
+		&i.ShippingName,
+		&i.ShippingPhone,
+		&i.ShippingAddress,
+		&i.ShippingProvince,
+		&i.ShippingWard,
+		&i.Note,
+		&i.GrandTotal,
+		&i.Currency,
+		&i.CancelReason,
+		&i.CancelledBy,
+		&i.ConfirmedAt,
+		&i.DeliveredAt,
+		&i.ShippedAt,
+		&i.CompletedAt,
+		&i.CancelledAt,
+		&i.FailedAt,
+		&i.CreatedAt,
+		&i.IdempotencyKey,
+	)
+	return i, err
+}
+
 const getOrderByID = `-- name: GetOrderByID :one
-SELECT id, shop_id, buyer_id, status, shipping_name, shipping_phone, shipping_address, shipping_province, shipping_ward, note, grand_total, currency, cancel_reason, cancelled_by, confirmed_at, delivered_at, shipped_at, completed_at, cancelled_at, failed_at, created_at
+SELECT id, shop_id, buyer_id, status, shipping_name, shipping_phone, shipping_address, shipping_province, shipping_ward, note, grand_total, currency, cancel_reason, cancelled_by, confirmed_at, delivered_at, shipped_at, completed_at, cancelled_at, failed_at, created_at, idempotency_key
 FROM orders
 WHERE id = $1::text
 LIMIT 1
@@ -142,6 +189,7 @@ func (q *Queries) GetOrderByID(ctx context.Context, id string) (Order, error) {
 		&i.CancelledAt,
 		&i.FailedAt,
 		&i.CreatedAt,
+		&i.IdempotencyKey,
 	)
 	return i, err
 }

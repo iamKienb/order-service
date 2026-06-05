@@ -3,6 +3,7 @@ INSERT INTO orders (
     id,
     shop_id,
     buyer_id,
+    idempotency_key,
     status,
     shipping_name,
     shipping_phone,
@@ -25,6 +26,7 @@ INSERT INTO orders (
     @id::text,
     @shop_id::uuid,
     @buyer_id::uuid,
+    @idempotency_key::text,
     @status::text,
     @shipping_name::text,
     @shipping_phone::text,
@@ -49,6 +51,13 @@ INSERT INTO orders (
 SELECT *
 FROM orders
 WHERE id = @id::text
+LIMIT 1;
+
+-- name: GetOrderByBuyerAndIdempotencyKey :one
+SELECT *
+FROM orders
+WHERE buyer_id = @buyer_id::uuid
+  AND idempotency_key = @idempotency_key::text
 LIMIT 1;
 
 -- name: UpdateOrderStatus :execrows

@@ -2,6 +2,8 @@ package order
 
 import (
 	"context"
+	"errors"
+	"strings"
 
 	"order-command-module/internal/application/commands/place_order"
 	"order-command-module/internal/application/commands/preview_checkout"
@@ -12,6 +14,22 @@ import (
 const defaultCurrency = "VND"
 
 func (s *orderService) PlaceOrder(ctx context.Context, cmd place_order.Command, checkoutCtx preview_checkout.CheckoutContext) (*place_order.Result, error) {
+	idempotencyKey := strings.TrimSpace(cmd.IdempotencyKey)
+	if idempotencyKey == "" {
+		return nil, ErrOrderIdempotencyMissing
+	}
+
+	existing, err := s.orderRepo.GetOrderByBuyerAndIdempotencyKey(ctx, cmd.BuyerID, idempotencyKey)
+	if err == nil {
+		if !matchesPlaceOrderRequest(existing, cmd) {
+			return nil, domain_order.ErrOrderIdempotencyKeyConflict
+		}
+		return placeOrderResultFromOrder(existing), nil
+	}
+	if !errors.Is(err, domain_order.ErrOrderNotFound) {
+		return nil, err
+	}
+
 	baseItems := make([]checkoutLineInput, 0, len(cmd.Items))
 	for _, item := range cmd.Items {
 		baseItems = append(baseItems, checkoutLineInput{SkuID: item.SkuID, Quantity: item.Quantity})
@@ -26,6 +44,7 @@ func (s *orderService) PlaceOrder(ctx context.Context, cmd place_order.Command, 
 	newOrder := domain_order.NewOrder(domain_order.NewOrderParams{
 		ShopID:           cmd.ShopID,
 		BuyerID:          cmd.BuyerID,
+		IdempotencyKey:   idempotencyKey,
 		ShippingName:     address.ReceiverName,
 		ShippingPhone:    address.PhoneNumber,
 		ShippingAddress:  address.AddressLine,
@@ -62,11 +81,24 @@ func (s *orderService) PlaceOrder(ctx context.Context, cmd place_order.Command, 
 		}
 		return nil
 	}); err != nil {
+		if errors.Is(err, domain_order.ErrOrderIdempotencyKeyConflict) {
+			existing, readErr := s.orderRepo.GetOrderByBuyerAndIdempotencyKey(ctx, cmd.BuyerID, idempotencyKey)
+			if readErr == nil {
+				if !matchesPlaceOrderRequest(existing, cmd) {
+					return nil, domain_order.ErrOrderIdempotencyKeyConflict
+				}
+				return placeOrderResultFromOrder(existing), nil
+			}
+		}
 		return nil, err
 	}
 
-	reserveItems := make([]place_order.ReserveItem, 0, len(calcResult.Lines))
-	for _, item := range calcResult.Lines {
+	return placeOrderResultFromOrder(newOrder), nil
+}
+
+func placeOrderResultFromOrder(order *domain_order.Order) *place_order.Result {
+	reserveItems := make([]place_order.ReserveItem, 0, len(order.OrderItems))
+	for _, item := range order.OrderItems {
 		reserveItems = append(reserveItems, place_order.ReserveItem{
 			InventoryID: item.InventoryID.String(),
 			SkuID:       item.SkuID.String(),
@@ -74,5 +106,31 @@ func (s *orderService) PlaceOrder(ctx context.Context, cmd place_order.Command, 
 		})
 	}
 
-	return &place_order.Result{OrderID: newOrder.ID, Status: string(newOrder.Status), ReserveItems: reserveItems}, nil
+	return &place_order.Result{OrderID: order.ID, Status: string(order.Status), ReserveItems: reserveItems}
+}
+
+func matchesPlaceOrderRequest(order *domain_order.Order, cmd place_order.Command) bool {
+	if order.ShopID != cmd.ShopID {
+		return false
+	}
+
+	expected := make(map[string]int64, len(cmd.Items))
+	for _, item := range cmd.Items {
+		expected[item.SkuID.String()] += item.Quantity
+	}
+
+	actual := make(map[string]int64, len(order.OrderItems))
+	for _, item := range order.OrderItems {
+		actual[item.SkuID.String()] += item.Quantity
+	}
+
+	if len(expected) != len(actual) {
+		return false
+	}
+	for skuID, quantity := range expected {
+		if actual[skuID] != quantity {
+			return false
+		}
+	}
+	return true
 }

@@ -2,11 +2,14 @@ package runner
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 
 	"order-command-module/internal/application/commands/place_order"
 	"order-command-module/internal/infra/temporal/workflow"
 
+	enumspb "go.temporal.io/api/enums/v1"
 	"go.temporal.io/sdk/client"
 )
 
@@ -15,9 +18,12 @@ type PlaceOrderRunner interface {
 }
 
 func (r *workflowRunner) PlaceOrder(ctx context.Context, cmd place_order.Command) (*place_order.Result, error) {
+	workflowID := placeOrderWorkflowID(cmd)
 	run, err := r.temporalClient.ExecuteWorkflow(ctx, client.StartWorkflowOptions{
-		ID:        fmt.Sprintf("place-order-%s-%s", cmd.BuyerID.String(), cmd.ShopID.String()),
-		TaskQueue: r.temporalCfg.OrderTaskQueue,
+		ID:                       workflowID,
+		TaskQueue:                r.temporalCfg.OrderTaskQueue,
+		WorkflowIDConflictPolicy: enumspb.WORKFLOW_ID_CONFLICT_POLICY_USE_EXISTING,
+		WorkflowIDReusePolicy:    enumspb.WORKFLOW_ID_REUSE_POLICY_REJECT_DUPLICATE,
 	}, workflow.PlaceOrderWorkflow, cmd, r.temporalCfg)
 	if err != nil {
 		return nil, err
@@ -28,4 +34,9 @@ func (r *workflowRunner) PlaceOrder(ctx context.Context, cmd place_order.Command
 		return nil, fmt.Errorf("place order saga: %w", err)
 	}
 	return &output, nil
+}
+
+func placeOrderWorkflowID(cmd place_order.Command) string {
+	keyHash := sha256.Sum256([]byte(cmd.IdempotencyKey))
+	return fmt.Sprintf("place-order-%s-%s-%s", cmd.BuyerID.String(), cmd.ShopID.String(), hex.EncodeToString(keyHash[:])[:24])
 }
