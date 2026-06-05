@@ -6,6 +6,7 @@ import (
 
 	"connectrpc.com/connect"
 	"connectrpc.com/grpcreflect"
+	"github.com/iamKienb/api-contract/gen/order/orderconnect"
 	authx "github.com/iamKienb/go-core/middleware/auth"
 	observabilityx "github.com/iamKienb/go-core/middleware/observability"
 )
@@ -35,6 +36,10 @@ func NewAdapterModule(app *ApplicationModule, logger *slog.Logger) *AdapterModul
 
 	allInterceptors := connect.WithInterceptors(interceptors...)
 	mux := http.NewServeMux()
+	reflector := grpcreflect.NewStaticReflector(orderconnect.OrderQueryName)
+	orderQueryServer := orderconnect.UnimplementedOrderQueryHandler{}
+
+	mux.Handle(orderconnect.NewOrderQueryHandler(orderQueryServer, allInterceptors))
 	mux.Handle(grpcreflect.NewHandlerV1(reflector))
 	mux.Handle(grpcreflect.NewHandlerV1Alpha(reflector))
 

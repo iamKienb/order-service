@@ -9,6 +9,7 @@ var (
 	ErrOrderItemsCannotBeEmpty         = errors.New("ORDER_ITEMS_CANNOT_BE_EMPTY")
 	ErrOrderItemInvalidCalculation     = errors.New("ORDER_ITEM_INVALID_CALCULATION")
 	ErrOrderCurrencyMismatch           = errors.New("ORDER_CURRENCY_MISMATCH")
+	ErrOrderNotFound                   = errors.New("ORDER_NOT_FOUND")
 
 	ErrOrderCannotCancel     = errors.New("order_cannot_cancel_in_current_status")
 	ErrOrderBuyerNotAllowed  = errors.New("buyer_cannot_cancel_once_confirmed")

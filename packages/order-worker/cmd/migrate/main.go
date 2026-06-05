@@ -9,9 +9,9 @@ import (
 	"sort"
 	"time"
 
-	"inventory-shared-module/alias"
-	"inventory-worker-module/internal/bootstrap/config"
-	"inventory-worker-module/internal/bootstrap/module"
+	"order-shared-module/alias"
+	"order-worker-module/internal/bootstrap/config"
+	"order-worker-module/internal/bootstrap/module"
 
 	"github.com/elastic/go-elasticsearch/v8"
 	configx "github.com/iamKienb/go-core/config"
@@ -32,7 +32,7 @@ const MigrationIndex = ".migration_history"
 func main() {
 	ctx := context.Background()
 
-	cfg, err := configx.Loader[config.InventoryWorkerConfig]()
+	cfg, err := configx.Loader[config.OrderWorkerConfig]()
 	if err != nil {
 		log.Fatal("failed to load config")
 	}
@@ -47,8 +47,7 @@ func main() {
 	ensureMigrationIndex(ctx, client)
 
 	migrations := []aliasMigration{
-		{Alias: alias.InventoryAlias, Glob: "migrations/inventories/*.json"},
-		{Alias: alias.InventoryMovementAlias, Glob: "migrations/inventory_movements/*.json"},
+		{Alias: alias.OrderAlias, Glob: "migrations/orders/*.json"},
 	}
 
 	for _, migration := range migrations {

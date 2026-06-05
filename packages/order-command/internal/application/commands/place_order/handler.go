@@ -2,24 +2,18 @@ package place_order
 
 import "context"
 
-type CheckoutContext struct {
-	ProductSkus []*port.ProductSku
-	SkuStocks   []*port.SkuStock
-	UserAddress *port.UserAddress
-}
-
-type orderService interface {
+type workflowRunner interface {
 	PlaceOrder(ctx context.Context, cmd Command) (*Result, error)
 }
 
 type handler struct {
-	service orderService
+	workflow workflowRunner
 }
 
-func NewHandler(service orderService) Executor {
-	return &handler{service: service}
+func NewHandler(workflow workflowRunner) Executor {
+	return &handler{workflow: workflow}
 }
 
 func (h *handler) Execute(ctx context.Context, cmd Command) (*Result, error) {
-	return h.service.PlaceOrder(ctx, cmd)
+	return h.workflow.PlaceOrder(ctx, cmd)
 }

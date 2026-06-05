@@ -3,8 +3,8 @@ package outbox
 import (
 	"encoding/json"
 
-	"inventory-command-module/db/repository"
-	"inventory-command-module/internal/application/port"
+	"order-command-module/db/repository"
+	"order-command-module/internal/application/port"
 
 	"github.com/iamKienb/go-core/postgres/conv"
 	"github.com/jackc/pgx/v5/pgtype"

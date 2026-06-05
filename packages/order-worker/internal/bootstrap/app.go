@@ -6,9 +6,9 @@ import (
 	"log/slog"
 	"sync"
 
-	"inventory-shared-module/events"
-	"inventory-worker-module/internal/bootstrap/config"
-	"inventory-worker-module/internal/bootstrap/module"
+	"order-shared-module/events"
+	"order-worker-module/internal/bootstrap/config"
+	"order-worker-module/internal/bootstrap/module"
 
 	configx "github.com/iamKienb/go-core/config"
 	kafkax "github.com/iamKienb/go-core/kafka"
@@ -25,7 +25,7 @@ func NewApp(logger *slog.Logger) *App {
 }
 
 func (a *App) Start(ctx context.Context) error {
-	cfg, err := configx.Loader[config.InventoryWorkerConfig]()
+	cfg, err := configx.Loader[config.OrderWorkerConfig]()
 	if err != nil {
 		return fmt.Errorf("load config: %w", err)
 	}
@@ -49,7 +49,7 @@ func (a *App) Start(ctx context.Context) error {
 	}
 	a.consumers = consumers
 
-	a.logger.Info("starting inventory worker", slog.Any("topics", cfg.Consumer.Topics))
+	a.logger.Info("starting order worker", slog.Any("topics", cfg.Consumer.Topics))
 
 	errCh := make(chan error, len(consumers))
 	var wg sync.WaitGroup

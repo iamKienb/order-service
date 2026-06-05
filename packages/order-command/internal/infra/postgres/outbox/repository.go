@@ -3,8 +3,8 @@ package outbox
 import (
 	"context"
 
-	"inventory-command-module/db/repository"
-	"inventory-command-module/internal/application/port"
+	"order-command-module/db/repository"
+	"order-command-module/internal/application/port"
 
 	pgx "github.com/iamKienb/go-core/postgres"
 )

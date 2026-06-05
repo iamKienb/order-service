@@ -1,24 +1,22 @@
-package create_inventories
+package cancel_order
 
 import (
 	"context"
 
-	"inventory-command-module/internal/domain/shared"
+	"order-command-module/internal/domain/order"
+	"order-command-module/internal/domain/shared"
 )
 
-type Item struct {
-	SkuID    shared.SkuID
-	Quantity int64
-}
-
 type Command struct {
-	ShopID    shared.ShopID
+	OrderID   string
 	ActorID   shared.UserID
-	Inventory []Item
+	ActorType order.ActorType
+	Reason    string
 }
 
 type Result struct {
-	Success bool
+	OrderID string
+	Status  string
 }
 
 type Executor interface {

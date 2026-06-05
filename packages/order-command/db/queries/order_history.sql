@@ -1,38 +1,26 @@
--- name: CreateInventoryReservationBatch :exec
-INSERT INTO inventory_reservations (
+-- name: CreateOrderHistoryBatch :exec
+INSERT INTO order_history (
     id,
-    inventory_id,
     order_id,
-    quantity,
-    status,
-    expires_at,
-    created_at,
-    updated_at
-) SELECT
+    from_status,
+    to_status,
+    changed_by,
+    actor_type,
+    reason,
+    created_at
+)
+SELECT
     unnest(@ids::uuid[]),
-    unnest(@inventory_ids::uuid[]),
-    unnest(@order_ids::text[]),
-    @status::text,
-    @expires_at::timestamptz,
-    @created_at::timestamptz,
-    @updated_at::timestamptz;
+    @order_id::text,
+    unnest(@from_statuses::text[]),
+    unnest(@to_statuses::text[]),
+    unnest(@changed_bys::uuid[]),
+    unnest(@actor_types::text[]),
+    unnest(@reasons::text[]),
+    @created_at::timestamptz;
 
-
--- name: ReleaseReservationsByOrderID :many
-UPDATE inventory_reservations
-SET
-    status = 'RELEASED',
-    updated_at = @updated_at::timestamptz
-WHERE order_id = @order_id::text 
-    AND status = 'HOLD'
-RETURNING *;
-
-
--- name: FulfillReservationsByOrderID :many
-UPDATE inventory_reservations
-SET
-    status = 'COMPLETED',
-    updated_at = @updated_at::timestamptz
-WHERE order_id = @order_id::text 
-    AND status = 'HOLD'
-RETURNING *;
+-- name: ListOrderHistoryByOrderID :many
+SELECT *
+FROM order_history
+WHERE order_id = @order_id::text
+ORDER BY created_at ASC;

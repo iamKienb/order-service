@@ -1,169 +1,192 @@
-package inventory
+package order
 
 import (
-	"inventory-command-module/internal/application/commands/create_inventories"
-	"inventory-command-module/internal/application/commands/delete_inventories"
-	"inventory-command-module/internal/application/commands/fulfill_stock"
-	"inventory-command-module/internal/application/commands/release_stock"
-	"inventory-command-module/internal/application/commands/reserve_stock"
-	"inventory-command-module/internal/domain/shared"
+	"order-command-module/internal/application/commands/cancel_order"
+	"order-command-module/internal/application/commands/confirm_order"
+	"order-command-module/internal/application/commands/place_order"
+	"order-command-module/internal/application/commands/preview_checkout"
+	domain_order "order-command-module/internal/domain/order"
+	"order-command-module/internal/domain/shared"
 
-	"github.com/iamKienb/api-contract/gen/inventory"
+	orderpb "github.com/iamKienb/api-contract/gen/order"
 	"github.com/iamKienb/go-core/app_error"
-	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
-func ToCreateInventoriesCommand(userID string, req *inventory.CreateInventoriesRequest) (create_inventories.Command, error) {
-	parsedUserID, err := parseUserID(userID)
+const (
+	errCodeBuyerInvalid       = "buyer_invalid"
+	errCodeUserAddressInvalid = "user_address_invalid"
+	errCodeShopInvalid        = "shop_invalid"
+	errCodeSkuInvalid         = "sku_invalid"
+	errCodeActorInvalid       = "actor_invalid"
+
+	errMsgBuyerInvalid       = "invalid buyer id"
+	errMsgUserAddressInvalid = "invalid user address id"
+	errMsgShopInvalid        = "invalid shop id"
+	errMsgSkuInvalid         = "invalid sku id"
+	errMsgActorInvalid       = "invalid actor id"
+)
+
+func ToPreviewCheckoutCommand(req *orderpb.PreviewCheckoutRequest) (preview_checkout.Command, error) {
+	buyerID, err := parseID[shared.UserID](req.GetBuyerId(), errCodeBuyerInvalid, errMsgBuyerInvalid)
 	if err != nil {
-		return create_inventories.Command{}, err
+		return preview_checkout.Command{}, err
 	}
 
-	parsedShopID, err := parseShopID(req.GetShopId())
+	addressID, err := parseID[shared.UserAddressID](req.GetAddressUserId(), errCodeUserAddressInvalid, errMsgUserAddressInvalid)
 	if err != nil {
-		return create_inventories.Command{}, err
+		return preview_checkout.Command{}, err
 	}
 
-	items := make([]create_inventories.Item, 0, len(req.GetItems()))
+	shopID, err := parseID[shared.ShopID](req.GetShopId(), errCodeShopInvalid, errMsgShopInvalid)
+	if err != nil {
+		return preview_checkout.Command{}, err
+	}
+
+	items, err := toPreviewItems(req.GetItems())
+	if err != nil {
+		return preview_checkout.Command{}, err
+	}
+
+	return preview_checkout.Command{
+		ShopID:         shopID,
+		BuyerID:        buyerID,
+		BuyerAddressID: addressID,
+		Items:          items,
+	}, nil
+}
+
+func ToPreviewCheckoutResponse(shopID string, result *preview_checkout.Result) *orderpb.PreviewCheckoutResponse {
+	items := make([]*orderpb.PreviewItemDetails, 0, len(result.Items))
+	for _, item := range result.Items {
+		items = append(items, &orderpb.PreviewItemDetails{
+			SkuId:       item.SkuID.String(),
+			InventoryId: item.InventoryID.String(),
+			Name:        item.ProductName,
+			ThumbUrl:    item.ImageURL,
+			Price:       item.BasePrice,
+			Quantity:    int32(item.Quantity),
+		})
+	}
+
+	return &orderpb.PreviewCheckoutResponse{
+		ShopId:           shopID,
+		TotalItemPrice:   result.GrandTotal,
+		TotalShippingFee: 0,
+		GrandTotal:       result.GrandTotal,
+		Items:            items,
+	}
+}
+
+func ToPlaceOrderCommand(req *orderpb.PlaceOrderRequest) (place_order.Command, error) {
+	buyerID, err := parseID[shared.UserID](req.GetBuyerId(), errCodeBuyerInvalid, errMsgBuyerInvalid)
+	if err != nil {
+		return place_order.Command{}, err
+	}
+
+	addressID, err := parseID[shared.UserAddressID](req.GetAddressUserId(), errCodeUserAddressInvalid, errMsgUserAddressInvalid)
+	if err != nil {
+		return place_order.Command{}, err
+	}
+
+	shopID, err := parseID[shared.ShopID](req.GetShopId(), errCodeShopInvalid, errMsgShopInvalid)
+	if err != nil {
+		return place_order.Command{}, err
+	}
+
+	items := make([]place_order.Item, 0, len(req.GetItems()))
 	for _, item := range req.GetItems() {
-		skuID, err := parseSkuID(item.GetSkuId())
+		skuID, err := parseID[shared.SkuID](item.GetSkuId(), errCodeSkuInvalid, errMsgSkuInvalid)
 		if err != nil {
-			return create_inventories.Command{}, err
+			return place_order.Command{}, err
 		}
 
-		items = append(items, create_inventories.Item{
+		items = append(items, place_order.Item{
+			SkuID:     skuID,
+			BasePrice: item.GetBasePrice(),
+			Quantity:  int64(item.GetQuantity()),
+		})
+	}
+
+	return place_order.Command{
+		ShopID:         shopID,
+		BuyerID:        buyerID,
+		BuyerAddressID: addressID,
+		Items:          items,
+	}, nil
+}
+
+func ToPlaceOrderResponse(result *place_order.Result) *orderpb.PlaceOrderResponse {
+	return &orderpb.PlaceOrderResponse{Success: result != nil}
+}
+
+func ToCancelOrderCommand(req *orderpb.CancelOrderRequest) (cancel_order.Command, error) {
+	actorID, err := parseID[shared.UserID](req.GetActorId(), errCodeActorInvalid, errMsgActorInvalid)
+	if err != nil {
+		return cancel_order.Command{}, err
+	}
+
+	return cancel_order.Command{
+		OrderID:   req.GetOrderId(),
+		ActorID:   actorID,
+		ActorType: domain_order.ActorBuyer,
+		Reason:    req.GetReason(),
+	}, nil
+}
+
+func ToCancelOrderResponse(result *cancel_order.Result) *orderpb.CancelOrderResponse {
+	return &orderpb.CancelOrderResponse{
+		OrderId: result.OrderID,
+		Status:  result.Status,
+		Message: "order cancelled",
+	}
+}
+
+func ToConfirmOrderCommand(req *orderpb.ConfirmOrderRequest) (confirm_order.Command, error) {
+	shopID, err := parseID[shared.ShopID](req.GetShopId(), errCodeShopInvalid, errMsgShopInvalid)
+	if err != nil {
+		return confirm_order.Command{}, err
+	}
+
+	actorID, err := parseID[shared.UserID](req.GetActorId(), errCodeActorInvalid, errMsgActorInvalid)
+	if err != nil {
+		return confirm_order.Command{}, err
+	}
+
+	return confirm_order.Command{
+		OrderID: req.GetOrderId(),
+		ShopID:  shopID,
+		ActorID: actorID,
+	}, nil
+}
+
+func ToConfirmOrderResponse(result *confirm_order.Result) *orderpb.ConfirmOrderResponse {
+	return &orderpb.ConfirmOrderResponse{
+		OrderId: result.OrderID,
+		Status:  result.Status,
+	}
+}
+
+func toPreviewItems(items []*orderpb.CheckoutItem) ([]preview_checkout.Item, error) {
+	result := make([]preview_checkout.Item, 0, len(items))
+	for _, item := range items {
+		skuID, err := parseID[shared.SkuID](item.GetSkuId(), errCodeSkuInvalid, errMsgSkuInvalid)
+		if err != nil {
+			return nil, err
+		}
+
+		result = append(result, preview_checkout.Item{
 			SkuID:    skuID,
 			Quantity: int64(item.GetQuantity()),
 		})
 	}
 
-	return create_inventories.Command{
-		ShopID:    parsedShopID,
-		ActorID:   parsedUserID,
-		Inventory: items,
-	}, nil
+	return result, nil
 }
 
-func ToCreateInventoriesResponse(result *create_inventories.Result) *inventory.CreateInventoriesResponse {
-	return &inventory.CreateInventoriesResponse{Success: result.Success}
-}
-
-func ToDeleteInventoriesCommand(userID string, req *inventory.DeleteInventoryRequest) (delete_inventories.Command, error) {
-	parsedUserID, err := parseUserID(userID)
+func parseID[T ~[16]byte](value, code, message string) (T, error) {
+	parsed, err := shared.ParseToRawID[T](value)
 	if err != nil {
-		return delete_inventories.Command{}, err
-	}
-
-	skuIDs := make([]shared.SkuID, 0, len(req.GetSkuIds()))
-	for _, rawSkuID := range req.GetSkuIds() {
-		skuID, err := parseSkuID(rawSkuID)
-		if err != nil {
-			return delete_inventories.Command{}, err
-		}
-
-		skuIDs = append(skuIDs, skuID)
-	}
-
-	return delete_inventories.Command{
-		ActorID: parsedUserID,
-		SkuIDs:  skuIDs,
-	}, nil
-}
-
-func ToDeleteInventoriesResponse(result *delete_inventories.Result) *inventory.DeleteInventoryResponse {
-	return &inventory.DeleteInventoryResponse{Success: result.Success}
-}
-
-func ToReserveStockCommand(userID string, req *inventory.ReserveStockRequest) (reserve_stock.Command, error) {
-	parsedUserID, err := parseUserID(userID)
-	if err != nil {
-		return reserve_stock.Command{}, err
-	}
-
-	parsedShopID, err := parseShopID(req.GetShopId())
-	if err != nil {
-		return reserve_stock.Command{}, err
-	}
-
-	items := make([]reserve_stock.Item, 0, len(req.GetItems()))
-	for _, item := range req.GetItems() {
-		skuID, err := parseSkuID(item.GetSkuId())
-		if err != nil {
-			return reserve_stock.Command{}, err
-		}
-
-		items = append(items, reserve_stock.Item{
-			SkuID:    skuID,
-			Quantity: int64(item.GetQuantity()),
-		})
-	}
-
-	return reserve_stock.Command{
-		ShopID:  parsedShopID,
-		ActorID: parsedUserID,
-		OrderID: req.GetOrderId(),
-		Items:   items,
-	}, nil
-}
-
-func ToReserveStockResponse(result *reserve_stock.Result) *inventory.ReserveStockResponse {
-	return &inventory.ReserveStockResponse{ExpiresAt: timestamppb.New(result.ExpiresAt)}
-}
-
-func ToReleaseStockCommand(userID string, req *inventory.ReleaseStockRequest) (release_stock.Command, error) {
-	parsedUserID, err := parseUserID(userID)
-	if err != nil {
-		return release_stock.Command{}, err
-	}
-
-	return release_stock.Command{
-		OrderID: req.GetOrderId(),
-		ActorID: parsedUserID,
-	}, nil
-}
-
-func ToReleaseStockResponse(result *release_stock.Result) *inventory.ReleaseStockResponse {
-	return &inventory.ReleaseStockResponse{Success: result.Success}
-}
-
-func ToFulfillStockCommand(userID string, req *inventory.FulfillStockRequest) (fulfill_stock.Command, error) {
-	parsedUserID, err := parseUserID(userID)
-	if err != nil {
-		return fulfill_stock.Command{}, err
-	}
-
-	return fulfill_stock.Command{
-		OrderID: req.GetOrderId(),
-		ActorID: parsedUserID,
-	}, nil
-}
-
-func ToAFulfilStockResponse(result *fulfill_stock.Result) *inventory.FulfillStockResponse {
-	return &inventory.FulfillStockResponse{Success: result.Success}
-}
-
-func parseUserID(value string) (shared.UserID, error) {
-	parsed, err := shared.ParseToRawID[shared.UserID](value)
-	if err != nil {
-		return parsed, app_error.New(app_error.KindValidation, "user_invalid", "invalid user id", err)
-	}
-
-	return parsed, nil
-}
-
-func parseShopID(value string) (shared.ShopID, error) {
-	parsed, err := shared.ParseToRawID[shared.ShopID](value)
-	if err != nil {
-		return parsed, app_error.New(app_error.KindValidation, "shop_invalid", "invalid shop id", err)
-	}
-
-	return parsed, nil
-}
-
-func parseSkuID(value string) (shared.SkuID, error) {
-	parsed, err := shared.ParseToRawID[shared.SkuID](value)
-	if err != nil {
-		return parsed, app_error.New(app_error.KindValidation, "sku_invalid", "invalid sku id", err)
+		return parsed, app_error.New(app_error.KindValidation, code, message, err)
 	}
 
 	return parsed, nil

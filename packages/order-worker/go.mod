@@ -1,4 +1,4 @@
-module inventory-worker-module
+module order-worker-module
 
 go 1.25.8
 

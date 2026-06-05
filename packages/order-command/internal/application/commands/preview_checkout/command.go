@@ -25,6 +25,7 @@ type PreviewItemDetail struct {
 	SkuCode     string
 	ProductID   shared.ProductID
 	ProductName string
+	BasePrice   int64
 	SubTotal    int64
 	Quantity    int64
 	ImageURL    string

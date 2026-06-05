@@ -8,8 +8,10 @@ import (
 	"strconv"
 	"time"
 
-	"inventory-command-module/internal/bootstrap/config"
-	"inventory-command-module/internal/bootstrap/module"
+	"order-command-module/internal/bootstrap/config"
+	"order-command-module/internal/bootstrap/module"
+	"order-command-module/internal/infra/temporal"
+	"order-command-module/internal/infra/temporal/activity"
 
 	configx "github.com/iamKienb/go-core/config"
 	"golang.org/x/net/http2"
@@ -20,6 +22,7 @@ type App struct {
 	logger *slog.Logger
 	server *http.Server
 	infra  *module.InfraModule
+	worker *temporal.Worker
 }
 
 func NewApp(logger *slog.Logger) *App {
@@ -27,7 +30,7 @@ func NewApp(logger *slog.Logger) *App {
 }
 
 func (a *App) Start(ctx context.Context) error {
-	cfg, err := configx.Loader[config.InventoryCommandConfig]()
+	cfg, err := configx.Loader[config.OrderCommandConfig]()
 	if err != nil {
 		return fmt.Errorf("load config: %w", err)
 	}
@@ -43,6 +46,19 @@ func (a *App) Start(ctx context.Context) error {
 
 	application := module.NewApplicationModule(infra)
 	adapter := module.NewAdapterModule(application, a.logger)
+
+	orderActivity := activity.NewOrderActivity(
+		application.OrderService,
+		infra.UserClient,
+		infra.ProductClient,
+		infra.InventoryClient,
+	)
+	a.worker = temporal.NewWorker(infra.TemporalClient, cfg.Temporal.OrderTaskQueue, temporal.Registry{
+		OrderActivity: orderActivity,
+	})
+	if err := a.worker.Start(); err != nil {
+		return fmt.Errorf("start temporal worker: %w", err)
+	}
 
 	a.server = &http.Server{
 		Addr: ":" + strconv.Itoa(cfg.Server.GrpcPort),
@@ -70,6 +86,10 @@ func (a *App) Stop(ctx context.Context) error {
 		if err := a.server.Shutdown(ctx); err != nil {
 			return fmt.Errorf("shutdown server: %w", err)
 		}
+	}
+
+	if a.worker != nil {
+		a.worker.Stop()
 	}
 
 	if a.infra != nil && a.infra.PGService != nil {

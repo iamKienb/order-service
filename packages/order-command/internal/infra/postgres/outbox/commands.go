@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"inventory-command-module/internal/application/port"
+	"order-command-module/internal/application/port"
 )
 
 func (r *repositoryImpl) SaveOutboxBatch(ctx context.Context, events []port.OutboxEvent) error {

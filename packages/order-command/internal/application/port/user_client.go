@@ -16,7 +16,7 @@ type UserAddress struct {
 	ReceiverName  string
 	PhoneNumber   string
 	ProvinceID    int
-	Province_name string
+	ProvinceName  string
 	WardID        int
 	WardName      string
 	AddressLine   string

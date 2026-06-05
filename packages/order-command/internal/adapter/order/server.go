@@ -1,151 +1,122 @@
-package inventory
+package order
 
 import (
 	"context"
 
-	"inventory-command-module/internal/application/commands/create_inventories"
-	"inventory-command-module/internal/application/commands/delete_inventories"
-	"inventory-command-module/internal/application/commands/fulfill_stock"
-	"inventory-command-module/internal/application/commands/release_stock"
-	"inventory-command-module/internal/application/commands/reserve_stock"
+	"order-command-module/internal/application/commands/cancel_order"
+	"order-command-module/internal/application/commands/confirm_order"
+	"order-command-module/internal/application/commands/place_order"
+	"order-command-module/internal/application/commands/preview_checkout"
 
 	"connectrpc.com/connect"
-	"github.com/iamKienb/api-contract/gen/inventory"
-	"github.com/iamKienb/api-contract/gen/inventory/inventoryconnect"
+	orderpb "github.com/iamKienb/api-contract/gen/order"
+	"github.com/iamKienb/api-contract/gen/order/orderconnect"
 	"github.com/iamKienb/go-core/app_error"
 	authx "github.com/iamKienb/go-core/middleware/auth"
 )
 
-type inventoryServer struct {
-	createInventoriesExecutor create_inventories.Executor
-	deleteInventoriesExecutor delete_inventories.Executor
-	reserveStockExecutor      reserve_stock.Executor
-	releaseStockExecutor      release_stock.Executor
-	fulfillStockExecutor      fulfill_stock.Executor
+const errMsgAuthenticationRequired = "authentication required"
+
+type orderServer struct {
+	previewCheckoutExecutor preview_checkout.Executor
+	placeOrderExecutor      place_order.Executor
+	cancelOrderExecutor     cancel_order.Executor
+	confirmOrderExecutor    confirm_order.Executor
 }
 
-func NewInventoryServer(
-	createInventoriesExecutor create_inventories.Executor,
-	deleteInventoriesExecutor delete_inventories.Executor,
-	reserveStockExecutor reserve_stock.Executor,
-	releaseStockExecutor release_stock.Executor,
-	fulfillStockExecutor fulfill_stock.Executor,
-) *inventoryServer {
-	return &inventoryServer{
-		createInventoriesExecutor: createInventoriesExecutor,
-		deleteInventoriesExecutor: deleteInventoriesExecutor,
-		reserveStockExecutor:      reserveStockExecutor,
-		releaseStockExecutor:      releaseStockExecutor,
-		fulfillStockExecutor:      fulfillStockExecutor,
+func NewOrderServer(
+	previewCheckoutExecutor preview_checkout.Executor,
+	placeOrderExecutor place_order.Executor,
+	cancelOrderExecutor cancel_order.Executor,
+	confirmOrderExecutor confirm_order.Executor,
+) *orderServer {
+	return &orderServer{
+		previewCheckoutExecutor: previewCheckoutExecutor,
+		placeOrderExecutor:      placeOrderExecutor,
+		cancelOrderExecutor:     cancelOrderExecutor,
+		confirmOrderExecutor:    confirmOrderExecutor,
 	}
 }
 
-func (s *inventoryServer) CreateInventories(ctx context.Context, req *connect.Request[inventory.CreateInventoriesRequest]) (*connect.Response[inventory.CreateInventoriesResponse], error) {
-	currentUser, err := requireCurrentUser(ctx)
+func (s *orderServer) PreviewCheckout(ctx context.Context, req *connect.Request[orderpb.PreviewCheckoutRequest]) (*connect.Response[orderpb.PreviewCheckoutResponse], error) {
+	if err := requireAuthenticatedRequest(ctx); err != nil {
+		return nil, err
+	}
+
+	cmd, err := ToPreviewCheckoutCommand(req.Msg)
 	if err != nil {
 		return nil, err
 	}
 
-	cmd, err := ToCreateInventoriesCommand(currentUser.UserID, req.Msg)
+	result, err := s.previewCheckoutExecutor.Execute(ctx, cmd)
 	if err != nil {
-		return nil, err
+		return nil, mapError(err)
 	}
 
-	result, err := s.createInventoriesExecutor.Execute(ctx, cmd)
-	if err != nil {
-		return nil, err
-	}
-
-	return connect.NewResponse(ToCreateInventoriesResponse(result)), nil
+	return connect.NewResponse(ToPreviewCheckoutResponse(cmd.ShopID.String(), result)), nil
 }
 
-func (s *inventoryServer) DeleteInventory(ctx context.Context, req *connect.Request[inventory.DeleteInventoryRequest]) (*connect.Response[inventory.DeleteInventoryResponse], error) {
-	currentUser, err := requireCurrentUser(ctx)
+func (s *orderServer) PlaceOrder(ctx context.Context, req *connect.Request[orderpb.PlaceOrderRequest]) (*connect.Response[orderpb.PlaceOrderResponse], error) {
+	if err := requireAuthenticatedRequest(ctx); err != nil {
+		return nil, err
+	}
+
+	cmd, err := ToPlaceOrderCommand(req.Msg)
 	if err != nil {
 		return nil, err
 	}
 
-	cmd, err := ToDeleteInventoriesCommand(currentUser.UserID, req.Msg)
+	result, err := s.placeOrderExecutor.Execute(ctx, cmd)
 	if err != nil {
-		return nil, err
+		return nil, mapError(err)
 	}
 
-	result, err := s.deleteInventoriesExecutor.Execute(ctx, cmd)
-	if err != nil {
-		return nil, err
-	}
-
-	return connect.NewResponse(ToDeleteInventoriesResponse(result)), nil
+	return connect.NewResponse(ToPlaceOrderResponse(result)), nil
 }
 
-func (s *inventoryServer) ReserveStock(ctx context.Context, req *connect.Request[inventory.ReserveStockRequest]) (*connect.Response[inventory.ReserveStockResponse], error) {
-	currentUser, err := requireCurrentUser(ctx)
+func (s *orderServer) CancelOrder(ctx context.Context, req *connect.Request[orderpb.CancelOrderRequest]) (*connect.Response[orderpb.CancelOrderResponse], error) {
+	if err := requireAuthenticatedRequest(ctx); err != nil {
+		return nil, err
+	}
+
+	cmd, err := ToCancelOrderCommand(req.Msg)
 	if err != nil {
 		return nil, err
 	}
 
-	cmd, err := ToReserveStockCommand(currentUser.UserID, req.Msg)
+	result, err := s.cancelOrderExecutor.Execute(ctx, cmd)
 	if err != nil {
-		return nil, err
+		return nil, mapError(err)
 	}
 
-	result, err := s.reserveStockExecutor.Execute(ctx, cmd)
-	if err != nil {
-		return nil, err
-	}
-
-	return connect.NewResponse(ToReserveStockResponse(result)), nil
+	return connect.NewResponse(ToCancelOrderResponse(result)), nil
 }
 
-func (s *inventoryServer) ReleaseStock(ctx context.Context, req *connect.Request[inventory.ReleaseStockRequest]) (*connect.Response[inventory.ReleaseStockResponse], error) {
-	currentUser, err := requireCurrentUser(ctx)
+func (s *orderServer) ConfirmOrder(ctx context.Context, req *connect.Request[orderpb.ConfirmOrderRequest]) (*connect.Response[orderpb.ConfirmOrderResponse], error) {
+	if err := requireAuthenticatedRequest(ctx); err != nil {
+		return nil, err
+	}
+
+	cmd, err := ToConfirmOrderCommand(req.Msg)
 	if err != nil {
 		return nil, err
 	}
 
-	cmd, err := ToReleaseStockCommand(currentUser.UserID, req.Msg)
+	result, err := s.confirmOrderExecutor.Execute(ctx, cmd)
 	if err != nil {
-		return nil, err
+		return nil, mapError(err)
 	}
 
-	result, err := s.releaseStockExecutor.Execute(ctx, cmd)
-	if err != nil {
-		return nil, err
-	}
-
-	return connect.NewResponse(ToReleaseStockResponse(result)), nil
+	return connect.NewResponse(ToConfirmOrderResponse(result)), nil
 }
 
-func (s *inventoryServer) FulfillStock(ctx context.Context, req *connect.Request[inventory.FulfillStockRequest]) (*connect.Response[inventory.FulfillStockResponse], error) {
-	currentUser, err := requireCurrentUser(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	cmd, err := ToFulfillStockCommand(currentUser.UserID, req.Msg)
-	if err != nil {
-		return nil, err
-	}
-
-	result, err := s.fulfillStockExecutor.Execute(ctx, cmd)
-	if err != nil {
-		return nil, err
-	}
-
-	return connect.NewResponse(ToAFulfilStockResponse(result)), nil
-}
-
-func requireCurrentUser(ctx context.Context) (*authClaims, error) {
+func requireAuthenticatedRequest(ctx context.Context) error {
 	claims := authx.GetUserInfoFromCtx(ctx)
 	if claims == nil || claims.UserID == "" {
-		return nil, app_error.Unauthorized("authentication required")
+		return app_error.Unauthorized(errMsgAuthenticationRequired)
 	}
 
-	return &authClaims{UserID: claims.UserID}, nil
+	return nil
 }
 
-type authClaims struct {
-	UserID string
-}
-
-var _ inventoryconnect.InventoryCommandServiceHandler = (*inventoryServer)(nil)
+var _ orderconnect.OrderCommandHandler = (*orderServer)(nil)

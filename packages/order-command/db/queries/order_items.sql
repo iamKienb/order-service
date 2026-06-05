@@ -1,30 +1,36 @@
--- name: CreateInventoryTransactionBatch :exec
-INSERT INTO inventory_transactions (
+-- name: CreateOrderItemsBatch :exec
+INSERT INTO order_items (
     id,
+    order_id,
     inventory_id,
-    type,
+    sku_id,
+    sku_code,
+    product_id,
+    product_name,
+    image_url,
     quantity,
-    balance_before,
-    balance_after,
-    reference_type,
-    reference_id,
-    action_type,
-    idempotency_key,
-    note,
-    created_by,
+    base_price,
+    item_subtotal,
+    currency,
     created_at
-) SELECT
+)
+SELECT
     unnest(@ids::uuid[]),
+    @order_id::text,
     unnest(@inventory_ids::uuid[]),
-    unnest(@types::text[]),
+    unnest(@sku_ids::uuid[]),
+    unnest(@sku_codes::text[]),
+    unnest(@product_ids::uuid[]),
+    unnest(@product_names::text[]),
+    unnest(@image_urls::text[]),
     unnest(@quantities::bigint[]),
-    unnest(@balances_before::bigint[]),
-    unnest(@balances_after::bigint[]),
-    unnest(@reference_types::text[]),
-    unnest(@reference_ids::text[]),
-    unnest(@action_types::text[]),
-    unnest(@idempotency_keys::text[]),
-    unnest(@notes::text[]),
-    unnest(@created_bys::uuid[]),
-    unnest(@created_ats::timestamptz[]);
+    unnest(@base_prices::bigint[]),
+    unnest(@item_subtotals::bigint[]),
+    @currency::text,
+    @created_at::timestamptz;
 
+-- name: ListOrderItemsByOrderID :many
+SELECT *
+FROM order_items
+WHERE order_id = @order_id::text
+ORDER BY created_at ASC;

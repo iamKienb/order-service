@@ -8,8 +8,8 @@ import (
 	"strconv"
 	"time"
 
-	"inventory-query-module/internal/bootstrap/config"
-	"inventory-query-module/internal/bootstrap/module"
+	"order-query-module/internal/bootstrap/config"
+	"order-query-module/internal/bootstrap/module"
 
 	configx "github.com/iamKienb/go-core/config"
 	"golang.org/x/net/http2"
@@ -27,7 +27,7 @@ func NewApp(logger *slog.Logger) *App {
 }
 
 func (a *App) Start(ctx context.Context) error {
-	cfg, err := configx.Loader[config.InventoryQueryConfig]()
+	cfg, err := configx.Loader[config.OrderQueryConfig]()
 	if err != nil {
 		return fmt.Errorf("load config: %w", err)
 	}
@@ -55,7 +55,7 @@ func (a *App) Start(ctx context.Context) error {
 		IdleTimeout:  60 * time.Second,
 	}
 
-	a.logger.Info("starting inventory query", slog.Int("port", cfg.Server.GrpcPort))
+	a.logger.Info("starting order query", slog.Int("port", cfg.Server.GrpcPort))
 	if err := a.server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 		return fmt.Errorf("server: %w", err)
 	}

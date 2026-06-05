@@ -88,6 +88,33 @@ func NewOrder(params NewOrderParams) *Order {
 	}
 }
 
+func (o *Order) MarkAsCreated() {
+	items := make([]OrderCreatedEventItem, 0, len(o.OrderItems))
+	for _, item := range o.OrderItems {
+		items = append(items, OrderCreatedEventItem{
+			InventoryID:  item.InventoryID.String(),
+			SkuID:        item.SkuID.String(),
+			SkuCode:      item.SkuCode,
+			ProductID:    item.ProductID.String(),
+			ProductName:  item.ProductName,
+			Quantity:     item.Quantity,
+			BasePrice:    item.BasePrice,
+			ItemSubtotal: item.ItemSubtotal,
+		})
+	}
+
+	o.AddEvent(OrderCreatedEvent{
+		OrderID:    o.ID,
+		ShopID:     o.ShopID.String(),
+		BuyerID:    o.BuyerID.String(),
+		Status:     o.Status,
+		GrandTotal: o.GrandTotal,
+		Currency:   o.Currency,
+		Items:      items,
+		CreatedAt:  o.CreatedAt,
+	})
+}
+
 func (o *Order) AddOrderItem(params OrderItemsParams) {
 	orderItemID := shared.NewID[shared.OrderItemID]()
 
@@ -109,8 +136,6 @@ func (o *Order) AddOrderItem(params OrderItemsParams) {
 	o.OrderItems = append(o.OrderItems, *item)
 }
 
-func (o *Order) MarkAsCreated()
-
 func (o *Order) Confirm(actorID shared.UserID) error {
 	if o.Status != StatusPending {
 		return ErrOrderInvalidStateTransition
@@ -120,6 +145,12 @@ func (o *Order) Confirm(actorID shared.UserID) error {
 	now := time.Now().UTC()
 	o.Status = StatusConfirmed
 	o.ConfirmedAt = &now
+	o.AddEvent(OrderConfirmedEvent{
+		OrderID:     o.ID,
+		ShopID:      o.ShopID.String(),
+		Status:      o.Status,
+		ConfirmedAt: now,
+	})
 
 	o.appendStateHistory(NewOrderHistoryParams{
 		OrderID:    o.ID,
@@ -169,6 +200,14 @@ func (o *Order) Cancel(params CancelParams) error {
 	o.Status = StatusCancelled
 	o.CancelReason = &params.Reason
 	o.CancelledAt = &now
+	o.AddEvent(OrderCancelledEvent{
+		OrderID:     o.ID,
+		ShopID:      o.ShopID.String(),
+		BuyerID:     o.BuyerID.String(),
+		Status:      o.Status,
+		Reason:      params.Reason,
+		CancelledAt: now,
+	})
 
 	var finalActorID shared.UserID
 	if params.ActorType == ActorSystem {

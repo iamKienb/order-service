@@ -20,7 +20,15 @@ type Command struct {
 }
 
 type Result struct {
-	Success bool
+	OrderID      string
+	Status       string
+	ReserveItems []ReserveItem
+}
+
+type ReserveItem struct {
+	InventoryID string
+	SkuID       string
+	Quantity    int64
 }
 
 type Executor interface {

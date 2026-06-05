@@ -1,36 +1,40 @@
 package module
 
 import (
-	"inventory-command-module/internal/application/commands/create_inventories"
-	"inventory-command-module/internal/application/commands/delete_inventories"
-	"inventory-command-module/internal/application/commands/fulfill_stock"
-	"inventory-command-module/internal/application/commands/release_stock"
-	"inventory-command-module/internal/application/commands/reserve_stock"
-	"inventory-command-module/internal/application/services/inventory"
-	"inventory-command-module/internal/application/services/outbox"
+	"order-command-module/internal/application/commands/cancel_order"
+	"order-command-module/internal/application/commands/confirm_order"
+	"order-command-module/internal/application/commands/place_order"
+	"order-command-module/internal/application/commands/preview_checkout"
+	orderapp "order-command-module/internal/application/services/order"
+	"order-command-module/internal/application/services/outbox"
 )
 
 type ApplicationModule struct {
-	CreateInventoriesExecutor create_inventories.Executor
-	DeleteInventoriesExecutor delete_inventories.Executor
-	ReserveStockExecutor      reserve_stock.Executor
-	ReleaseStockExecutor      release_stock.Executor
-	FulfillStockExecutor      fulfill_stock.Executor
+	OrderService            orderapp.Service
+	PreviewCheckoutExecutor preview_checkout.Executor
+	PlaceOrderExecutor      place_order.Executor
+	ConfirmOrderExecutor    confirm_order.Executor
+	CancelOrderExecutor     cancel_order.Executor
 }
 
 func NewApplicationModule(infra *InfraModule) *ApplicationModule {
 	outboxService := outbox.NewOutboxService(infra.OutboxRepo)
-	inventoryService := inventory.NewInventoryService(
-		infra.InventoryRepo,
+	orderService := orderapp.NewOrderService(
+		infra.OrderRepo,
 		outboxService,
 		infra.TxManager,
 	)
 
 	return &ApplicationModule{
-		CreateInventoriesExecutor: create_inventories.NewHandler(inventoryService),
-		DeleteInventoriesExecutor: delete_inventories.NewHandler(inventoryService),
-		ReserveStockExecutor:      reserve_stock.NewHandler(inventoryService),
-		ReleaseStockExecutor:      release_stock.NewHandler(inventoryService),
-		FulfillStockExecutor:      fulfill_stock.NewHandler(inventoryService),
+		OrderService: orderService,
+		PreviewCheckoutExecutor: preview_checkout.NewHandler(
+			orderService,
+			infra.UserClient,
+			infra.ProductClient,
+			infra.InventoryClient,
+		),
+		PlaceOrderExecutor:   place_order.NewHandler(infra.WorkflowRunner),
+		ConfirmOrderExecutor: confirm_order.NewHandler(infra.WorkflowRunner),
+		CancelOrderExecutor:  cancel_order.NewHandler(infra.WorkflowRunner),
 	}
 }

@@ -4,11 +4,11 @@ import (
 	"log/slog"
 	"net/http"
 
-	"inventory-command-module/internal/adapter/inventory"
+	orderadapter "order-command-module/internal/adapter/order"
 
 	"connectrpc.com/connect"
 	"connectrpc.com/grpcreflect"
-	"github.com/iamKienb/api-contract/gen/inventory/inventoryconnect"
+	"github.com/iamKienb/api-contract/gen/order/orderconnect"
 	authx "github.com/iamKienb/go-core/middleware/auth"
 	observabilityx "github.com/iamKienb/go-core/middleware/observability"
 )
@@ -39,19 +39,16 @@ func NewAdapterModule(app *ApplicationModule, logger *slog.Logger) *AdapterModul
 	allInterceptors := connect.WithInterceptors(interceptors...)
 
 	mux := http.NewServeMux()
-	reflector := grpcreflect.NewStaticReflector(
-		inventoryconnect.InventoryCommandServiceName,
+	reflector := grpcreflect.NewStaticReflector(orderconnect.OrderCommandName)
+
+	orderServer := orderadapter.NewOrderServer(
+		app.PreviewCheckoutExecutor,
+		app.PlaceOrderExecutor,
+		app.CancelOrderExecutor,
+		app.ConfirmOrderExecutor,
 	)
 
-	inventoryServer := inventory.NewInventoryServer(
-		app.CreateInventoriesExecutor,
-		app.DeleteInventoriesExecutor,
-		app.ReserveStockExecutor,
-		app.ReleaseStockExecutor,
-		app.FulfillStockExecutor,
-	)
-
-	mux.Handle(inventoryconnect.NewInventoryCommandServiceHandler(inventoryServer, allInterceptors))
+	mux.Handle(orderconnect.NewOrderCommandHandler(orderServer, allInterceptors))
 	mux.Handle(grpcreflect.NewHandlerV1(reflector))
 	mux.Handle(grpcreflect.NewHandlerV1Alpha(reflector))
 

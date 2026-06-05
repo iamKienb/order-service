@@ -2,7 +2,7 @@ package elasticsearch
 
 import (
 	"context"
-	"inventory-worker-module/internal/application/port"
+	"order-worker-module/internal/application/port"
 
 	esx "github.com/iamKienb/go-core/elasticsearch"
 )

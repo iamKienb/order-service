@@ -1,18 +1,20 @@
-package delete_inventories
+package confirm_order
 
 import (
 	"context"
 
-	"inventory-command-module/internal/domain/shared"
+	"order-command-module/internal/domain/shared"
 )
 
 type Command struct {
+	OrderID string
+	ShopID  shared.ShopID
 	ActorID shared.UserID
-	SkuIDs  []shared.SkuID
 }
 
 type Result struct {
-	Success bool
+	OrderID string
+	Status  string
 }
 
 type Executor interface {

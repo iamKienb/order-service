@@ -1,119 +1,67 @@
--- name: CreateInventoryItemsBatch :exec
-INSERT INTO inventories (
+-- name: CreateOrder :exec
+INSERT INTO orders (
     id,
-    sku_id,
     shop_id,
-    quantity,
-    reserved,
+    buyer_id,
     status,
-    created_by,
-    updated_by,
-    created_at,
-    updated_at
-)
-SELECT
-    unnest(@ids::uuid[]),
-    unnest(@sku_ids::uuid[]),
+    shipping_name,
+    shipping_phone,
+    shipping_address,
+    shipping_province,
+    shipping_ward,
+    note,
+    grand_total,
+    currency,
+    cancel_reason,
+    cancelled_by,
+    confirmed_at,
+    delivered_at,
+    shipped_at,
+    completed_at,
+    cancelled_at,
+    failed_at,
+    created_at
+) VALUES (
+    @id::text,
     @shop_id::uuid,
-    unnest(@quantities::bigint[]),
-    unnest(@reserved_quantities::bigint[]),
-    unnest(@statuses::text[]),
-    @created_by::uuid,
-    @updated_by::uuid,
-    @created_at::timestamptz,
-    NULL::timestamptz;
+    @buyer_id::uuid,
+    @status::text,
+    @shipping_name::text,
+    @shipping_phone::text,
+    @shipping_address::text,
+    @shipping_province::text,
+    @shipping_ward::text,
+    @note::text,
+    @grand_total::bigint,
+    @currency::text,
+    @cancel_reason::text,
+    @cancelled_by::uuid,
+    @confirmed_at::timestamptz,
+    @delivered_at::timestamptz,
+    @shipped_at::timestamptz,
+    @completed_at::timestamptz,
+    @cancelled_at::timestamptz,
+    @failed_at::timestamptz,
+    @created_at::timestamptz
+);
 
--- name: SoftDeleteInventoryItemsBySkuIDs :execrows
-UPDATE inventories
-SET
-    status = @deleted_status::text,
-    updated_by = @actor_id::uuid,
-    updated_at = @updated_at::timestamptz
-WHERE sku_id = ANY(@sku_ids::uuid[])
-  AND status = @active_status::text;
-
--- name: ListInventoryItemsBySkuIDs :many
-SELECT
-    id,
-    sku_id,
-    shop_id,
-    quantity,
-    reserved,
-    status,
-    created_by,
-    updated_by,
-    created_at,
-    updated_at
-FROM inventories
-WHERE sku_id = ANY(@sku_ids::uuid[])
-ORDER BY created_at ASC;
-
--- name: GetActiveInventoryItemByShopAndSku :one
-SELECT
-    id,
-    sku_id,
-    shop_id,
-    quantity,
-    reserved,
-    status,
-    created_by,
-    updated_by,
-    created_at,
-    updated_at
-FROM inventories
-WHERE shop_id = @shop_id::uuid
-  AND sku_id = @sku_id::uuid
-  AND status = @active_status::text
+-- name: GetOrderByID :one
+SELECT *
+FROM orders
+WHERE id = @id::text
 LIMIT 1;
 
-
--- name: ReserveInventoryStockBatch :execrows
-UPDATE inventories AS i
-SET 
-    reserved = i.reserved + u.req_quantity,
-    updated_by = @actor_id::uuid,
-    created_at = @created_at::timestamptz
-FROM (
-    SELECT * FROM ROWS FROM (
-        unnest(@inventory_ids::uuid[]), 
-        unnest(@quantities::bigint[])
-    ) AS tmp(inventory_id, req_quantity)
-) AS u
-WHERE i.shop_id = @shop_id::uuid
-  AND i.id = u.inventory_id
-  AND (i.quantity - i.reserved) >= u.req_quantity;
-
--- name: ReleaseInventoryStockBatch :execrows
-UPDATE inventories AS i
+-- name: UpdateOrderStatus :execrows
+UPDATE orders
 SET
-    reserved = i.reserved - u.req_quantity,
-    updated_by = @actor_id::uuid,
-    updated_at = @updated_at::timestamptz
-FROM (
-    SELECT * FROM ROWS FROM (
-        unnest(@inventory_ids::uuid[]),
-        unnest(@quantities::bigint[])
-    ) AS tmp(inventory_id, req_quantity)
-) AS u
-WHERE i.shop_id = @shop_id::uuid
-    AND i.id = u.inventory_id
-    AND i.reserved >= u.req_quantity;
-
-
--- name: FulfillInventoryStockBatch :execrows
-UPDATE inventories AS i
-SET
-    quantity = i.quantity - u.req_quantity,
-    reserved = i.reserved - u.req_quantity,
-    updated_by = @actor_id::uuid,
-    updated_at = @updated_at::timestamptz
-FROM (
-    SELECT * FROM ROWS FROM (
-        unnest(@inventory_ids::uuid[]),
-        unnest(@quantities::bigint[])
-    ) AS tmp(inventory_id, req_quantity)
-) AS u
-WHERE i.shop_id = @shop_id::uuid
-    AND i.id = u.inventory_id
-    AND i.quantity >= u.req_quantity
-    AND i.reserved >= u.req_quantity;
+    status = @status::text,
+    cancel_reason = @cancel_reason::text,
+    cancelled_by = @cancelled_by::uuid,
+    confirmed_at = @confirmed_at::timestamptz,
+    delivered_at = @delivered_at::timestamptz,
+    shipped_at = @shipped_at::timestamptz,
+    completed_at = @completed_at::timestamptz,
+    cancelled_at = @cancelled_at::timestamptz,
+    failed_at = @failed_at::timestamptz
+WHERE id = @id::text
+  AND status = @expected_status::text;

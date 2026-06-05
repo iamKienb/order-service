@@ -1,0 +1,31 @@
+package runner
+
+import (
+	"context"
+	"fmt"
+
+	"order-command-module/internal/application/commands/cancel_order"
+	"order-command-module/internal/infra/temporal/workflow"
+
+	"go.temporal.io/sdk/client"
+)
+
+type CancelOrderRunner interface {
+	CancelOrder(ctx context.Context, cmd cancel_order.Command) (*cancel_order.Result, error)
+}
+
+func (r *workflowRunner) CancelOrder(ctx context.Context, cmd cancel_order.Command) (*cancel_order.Result, error) {
+	run, err := r.temporalClient.ExecuteWorkflow(ctx, client.StartWorkflowOptions{
+		ID:        fmt.Sprintf("cancel-order-%s", cmd.OrderID),
+		TaskQueue: r.temporalCfg.OrderTaskQueue,
+	}, workflow.CancelOrderWorkflow, cmd, r.temporalCfg)
+	if err != nil {
+		return nil, err
+	}
+
+	var output cancel_order.Result
+	if err := run.Get(ctx, &output); err != nil {
+		return nil, fmt.Errorf("cancel order saga: %w", err)
+	}
+	return &output, nil
+}

@@ -8,7 +8,7 @@ import (
 	"syscall"
 	"time"
 
-	"inventory-query-module/internal/bootstrap"
+	"order-query-module/internal/bootstrap"
 )
 
 func main() {

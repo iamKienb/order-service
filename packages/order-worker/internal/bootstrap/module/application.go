@@ -1,8 +1,8 @@
 package module
 
 import (
-	"inventory-worker-module/internal/application/port"
-	"inventory-worker-module/internal/application/processor"
+	"order-worker-module/internal/application/port"
+	"order-worker-module/internal/application/processor"
 )
 
 type ApplicationModule struct {
@@ -11,6 +11,6 @@ type ApplicationModule struct {
 
 func NewApplicationModule(infra *InfraModule) *ApplicationModule {
 	return &ApplicationModule{
-		EventProcessor: processor.NewInventoryEventProcessor(infra.ESRepo),
+		EventProcessor: processor.NewOrderEventProcessor(infra.ESRepo),
 	}
 }

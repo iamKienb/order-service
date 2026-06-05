@@ -1,19 +1,19 @@
-package delete_inventories
+package confirm_order
 
 import "context"
 
-type inventoryService interface {
-	DeleteInventories(ctx context.Context, cmd Command) (*Result, error)
+type workflowRunner interface {
+	ConfirmOrder(ctx context.Context, cmd Command) (*Result, error)
 }
 
 type handler struct {
-	service inventoryService
+	workflow workflowRunner
 }
 
-func NewHandler(service inventoryService) Executor {
-	return &handler{service: service}
+func NewHandler(workflow workflowRunner) Executor {
+	return &handler{workflow: workflow}
 }
 
 func (h *handler) Execute(ctx context.Context, cmd Command) (*Result, error) {
-	return h.service.DeleteInventories(ctx, cmd)
+	return h.workflow.ConfirmOrder(ctx, cmd)
 }

@@ -2,7 +2,7 @@ CREATE TABLE order_items (
     id              UUID PRIMARY KEY,
     order_id        TEXT NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
     
-    inventory_id    UUID            NOT NULL;
+    inventory_id    UUID         NOT NULL,
     sku_id          UUID         NOT NULL,
     sku_code        VARCHAR(100) NOT NULL,
     product_id      UUID         NOT NULL,

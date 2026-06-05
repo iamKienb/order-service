@@ -8,46 +8,55 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-type Inventory struct {
-	ID        pgtype.UUID
-	SkuID     pgtype.UUID
-	ShopID    pgtype.UUID
-	Quantity  int64
-	Reserved  int64
-	Status    string
-	CreatedBy pgtype.UUID
-	UpdatedBy pgtype.UUID
-	CreatedAt pgtype.Timestamptz
-	UpdatedAt pgtype.Timestamptz
+type Order struct {
+	ID               string
+	ShopID           pgtype.UUID
+	BuyerID          pgtype.UUID
+	Status           string
+	ShippingName     string
+	ShippingPhone    string
+	ShippingAddress  string
+	ShippingProvince string
+	ShippingWard     string
+	Note             pgtype.Text
+	GrandTotal       int64
+	Currency         string
+	CancelReason     pgtype.Text
+	CancelledBy      pgtype.UUID
+	ConfirmedAt      pgtype.Timestamptz
+	DeliveredAt      pgtype.Timestamptz
+	ShippedAt        pgtype.Timestamptz
+	CompletedAt      pgtype.Timestamptz
+	CancelledAt      pgtype.Timestamptz
+	FailedAt         pgtype.Timestamptz
+	CreatedAt        pgtype.Timestamptz
 }
 
-type InventoryReservation struct {
-	ID          pgtype.UUID
-	InventoryID pgtype.UUID
-	SkuID       pgtype.UUID
-	ShopID      pgtype.UUID
-	OrderID     string
-	Quantity    int64
-	Status      string
-	ExpiresAt   pgtype.Timestamptz
-	CreatedAt   pgtype.Timestamptz
-	UpdatedAt   pgtype.Timestamptz
+type OrderHistory struct {
+	ID         pgtype.UUID
+	OrderID    string
+	FromStatus pgtype.Text
+	ToStatus   string
+	ChangedBy  pgtype.UUID
+	ActorType  string
+	Reason     string
+	CreatedAt  pgtype.Timestamptz
 }
 
-type InventoryTransaction struct {
-	ID             pgtype.UUID
-	InventoryID    pgtype.UUID
-	Type           string
-	Quantity       int64
-	BalanceBefore  int64
-	BalanceAfter   int64
-	ReferenceType  string
-	ReferenceID    string
-	ActionType     string
-	IdempotencyKey pgtype.Text
-	Note           pgtype.Text
-	CreatedBy      pgtype.UUID
-	CreatedAt      pgtype.Timestamptz
+type OrderItem struct {
+	ID           pgtype.UUID
+	OrderID      string
+	InventoryID  pgtype.UUID
+	SkuID        pgtype.UUID
+	SkuCode      string
+	ProductID    pgtype.UUID
+	ProductName  string
+	ImageUrl     string
+	Quantity     int64
+	BasePrice    int64
+	ItemSubtotal int64
+	Currency     string
+	CreatedAt    pgtype.Timestamptz
 }
 
 type Outbox struct {

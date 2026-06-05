@@ -1,0 +1,37 @@
+{
+  "settings": {
+    "number_of_shards": 3,
+    "number_of_replicas": 1
+  },
+  "mappings": {
+    "dynamic": true,
+    "properties": {
+      "order_id": { "type": "keyword" },
+      "shop_id": { "type": "keyword" },
+      "buyer_id": { "type": "keyword" },
+      "status": { "type": "keyword" },
+      "grand_total": { "type": "long" },
+      "currency": { "type": "keyword" },
+      "reason": { "type": "text", "fields": { "keyword": { "type": "keyword", "ignore_above": 256 } } },
+      "created_at": { "type": "date" },
+      "confirmed_at": { "type": "date" },
+      "cancelled_at": { "type": "date" },
+      "items": {
+        "type": "nested",
+        "properties": {
+          "inventory_id": { "type": "keyword" },
+          "sku_id": { "type": "keyword" },
+          "sku_code": { "type": "keyword" },
+          "product_id": { "type": "keyword" },
+          "product_name": {
+            "type": "text",
+            "fields": { "keyword": { "type": "keyword", "ignore_above": 256 } }
+          },
+          "quantity": { "type": "long" },
+          "base_price": { "type": "long" },
+          "item_subtotal": { "type": "long" }
+        }
+      }
+    }
+  }
+}

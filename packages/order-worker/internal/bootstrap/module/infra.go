@@ -4,9 +4,9 @@ import (
 	"context"
 	"fmt"
 
-	"inventory-worker-module/internal/application/port"
-	"inventory-worker-module/internal/bootstrap/config"
-	"inventory-worker-module/internal/infra/elasticsearch"
+	"order-worker-module/internal/application/port"
+	"order-worker-module/internal/bootstrap/config"
+	"order-worker-module/internal/infra/elasticsearch"
 
 	esx "github.com/iamKienb/go-core/elasticsearch"
 	kafkax "github.com/iamKienb/go-core/kafka"
@@ -18,7 +18,7 @@ type InfraModule struct {
 	ESRepo    port.ESRepository
 }
 
-func NewInfraModule(ctx context.Context, cfg *config.InventoryWorkerConfig) (*InfraModule, error) {
+func NewInfraModule(ctx context.Context, cfg *config.OrderWorkerConfig) (*InfraModule, error) {
 	esService, err := esx.New(cfg.ES)
 	if err != nil {
 		return nil, fmt.Errorf("elasticsearch: %w", err)

@@ -24,8 +24,18 @@ type handler struct {
 	service         orderService
 }
 
-func NewHandler(service orderService) Executor {
-	return &handler{service: service}
+func NewHandler(
+	service orderService,
+	userClient port.UserClient,
+	productClient port.ProductClient,
+	inventoryClient port.InventoryClient,
+) Executor {
+	return &handler{
+		service:         service,
+		userClient:      userClient,
+		productClient:   productClient,
+		inventoryClient: inventoryClient,
+	}
 }
 
 func (h *handler) Execute(ctx context.Context, cmd Command) (*Result, error) {
