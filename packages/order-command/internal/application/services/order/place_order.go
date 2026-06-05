@@ -9,6 +9,7 @@ import (
 	"order-command-module/internal/application/commands/preview_checkout"
 	"order-command-module/internal/application/port"
 	domain_order "order-command-module/internal/domain/order"
+	domain_shared "order-command-module/internal/domain/shared"
 )
 
 const defaultCurrency = "VND"
@@ -19,9 +20,18 @@ func (s *orderService) PlaceOrder(ctx context.Context, cmd place_order.Command, 
 		return nil, ErrOrderIdempotencyMissing
 	}
 
+	baseItems := make([]checkoutLineInput, 0, len(cmd.Items))
+	for _, item := range cmd.Items {
+		baseItems = append(baseItems, checkoutLineInput{SkuID: item.SkuID, Quantity: item.Quantity})
+	}
+	normalizedItems, err := normalizeCheckoutItems(baseItems)
+	if err != nil {
+		return nil, err
+	}
+
 	existing, err := s.orderRepo.GetOrderByBuyerAndIdempotencyKey(ctx, cmd.BuyerID, idempotencyKey)
 	if err == nil {
-		if !matchesPlaceOrderRequest(existing, cmd) {
+		if !matchesPlaceOrderRequest(existing, cmd.ShopID, normalizedItems) {
 			return nil, domain_order.ErrOrderIdempotencyKeyConflict
 		}
 		return placeOrderResultFromOrder(existing), nil
@@ -30,12 +40,7 @@ func (s *orderService) PlaceOrder(ctx context.Context, cmd place_order.Command, 
 		return nil, err
 	}
 
-	baseItems := make([]checkoutLineInput, 0, len(cmd.Items))
-	for _, item := range cmd.Items {
-		baseItems = append(baseItems, checkoutLineInput{SkuID: item.SkuID, Quantity: item.Quantity})
-	}
-
-	calcResult, err := s.calculateOrderPlacement(baseItems, checkoutCtx.ProductSkus, checkoutCtx.SkuStocks)
+	calcResult, err := s.calculateOrderPlacement(normalizedItems, checkoutCtx.ProductSkus, checkoutCtx.SkuStocks)
 	if err != nil {
 		return nil, err
 	}
@@ -84,7 +89,7 @@ func (s *orderService) PlaceOrder(ctx context.Context, cmd place_order.Command, 
 		if errors.Is(err, domain_order.ErrOrderIdempotencyKeyConflict) {
 			existing, readErr := s.orderRepo.GetOrderByBuyerAndIdempotencyKey(ctx, cmd.BuyerID, idempotencyKey)
 			if readErr == nil {
-				if !matchesPlaceOrderRequest(existing, cmd) {
+				if !matchesPlaceOrderRequest(existing, cmd.ShopID, normalizedItems) {
 					return nil, domain_order.ErrOrderIdempotencyKeyConflict
 				}
 				return placeOrderResultFromOrder(existing), nil
@@ -109,13 +114,13 @@ func placeOrderResultFromOrder(order *domain_order.Order) *place_order.Result {
 	return &place_order.Result{OrderID: order.ID, Status: string(order.Status), ReserveItems: reserveItems}
 }
 
-func matchesPlaceOrderRequest(order *domain_order.Order, cmd place_order.Command) bool {
-	if order.ShopID != cmd.ShopID {
+func matchesPlaceOrderRequest(order *domain_order.Order, shopID domain_shared.ShopID, items []checkoutLineInput) bool {
+	if order.ShopID != shopID {
 		return false
 	}
 
-	expected := make(map[string]int64, len(cmd.Items))
-	for _, item := range cmd.Items {
+	expected := make(map[string]int64, len(items))
+	for _, item := range items {
 		expected[item.SkuID.String()] += item.Quantity
 	}
 

@@ -21,6 +21,7 @@ const (
 	errCodeSkuInvalid         = "sku_invalid"
 	errCodeActorInvalid       = "actor_invalid"
 	errCodeIdempotencyInvalid = "idempotency_key_invalid"
+	errCodeQuantityInvalid    = "quantity_invalid"
 
 	errMsgBuyerInvalid       = "invalid buyer id"
 	errMsgUserAddressInvalid = "invalid user address id"
@@ -28,6 +29,7 @@ const (
 	errMsgSkuInvalid         = "invalid sku id"
 	errMsgActorInvalid       = "invalid actor id"
 	errMsgIdempotencyInvalid = "invalid idempotency key"
+	errMsgQuantityInvalid    = "invalid quantity"
 )
 
 func ToPreviewCheckoutCommand(req *orderpb.PreviewCheckoutRequest) (preview_checkout.Command, error) {
@@ -104,6 +106,10 @@ func ToPlaceOrderCommand(req *orderpb.PlaceOrderRequest) (place_order.Command, e
 
 	items := make([]place_order.Item, 0, len(req.GetItems()))
 	for _, item := range req.GetItems() {
+		if item.GetQuantity() <= 0 {
+			return place_order.Command{}, app_error.New(app_error.KindValidation, errCodeQuantityInvalid, errMsgQuantityInvalid, nil)
+		}
+
 		skuID, err := parseID[shared.SkuID](item.GetSkuId(), errCodeSkuInvalid, errMsgSkuInvalid)
 		if err != nil {
 			return place_order.Command{}, err
@@ -187,6 +193,10 @@ func ToConfirmOrderResponse(result *confirm_order.Result) *orderpb.ConfirmOrderR
 func toPreviewItems(items []*orderpb.CheckoutItem) ([]preview_checkout.Item, error) {
 	result := make([]preview_checkout.Item, 0, len(items))
 	for _, item := range items {
+		if item.GetQuantity() <= 0 {
+			return nil, app_error.New(app_error.KindValidation, errCodeQuantityInvalid, errMsgQuantityInvalid, nil)
+		}
+
 		skuID, err := parseID[shared.SkuID](item.GetSkuId(), errCodeSkuInvalid, errMsgSkuInvalid)
 		if err != nil {
 			return nil, err

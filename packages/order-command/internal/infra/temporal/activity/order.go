@@ -124,8 +124,14 @@ func (a *OrderActivity) checkoutContext(ctx context.Context, cmd place_order.Com
 	var userAddress *port.UserAddress
 
 	skuIDs := make([]string, 0, len(cmd.Items))
+	skuSeen := make(map[string]struct{}, len(cmd.Items))
 	for _, item := range cmd.Items {
-		skuIDs = append(skuIDs, item.SkuID.String())
+		skuID := item.SkuID.String()
+		if _, exists := skuSeen[skuID]; exists {
+			continue
+		}
+		skuSeen[skuID] = struct{}{}
+		skuIDs = append(skuIDs, skuID)
 	}
 
 	group.Go(func() error {

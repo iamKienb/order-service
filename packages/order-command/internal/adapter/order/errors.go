@@ -11,6 +11,7 @@ import (
 
 const (
 	errCodeCheckoutItemInvalid      = "checkout_item_invalid"
+	errCodeCheckoutItemEmpty        = "checkout_item_empty"
 	errCodeCheckoutItemUnavailable  = "checkout_item_unavailable"
 	errCodeOrderShopMismatch        = "order_shop_mismatch"
 	errCodeOrderInvalidTransition   = "order_invalid_transition"
@@ -22,6 +23,7 @@ const (
 	errCodeOrderIdempotencyConflict = "order_idempotency_key_conflict"
 
 	errMsgCheckoutItemInvalid      = "checkout item is invalid"
+	errMsgCheckoutItemEmpty        = "checkout items are required"
 	errMsgCheckoutItemUnavailable  = "checkout item is unavailable"
 	errMsgOrderShopMismatch        = "order does not belong to this shop"
 	errMsgOrderInvalidTransition   = "order status transition is invalid"
@@ -37,6 +39,8 @@ func mapError(err error) error {
 	switch {
 	case errors.Is(err, app_order.ErrCheckoutItemInvalid):
 		return app_error.New(app_error.KindValidation, errCodeCheckoutItemInvalid, errMsgCheckoutItemInvalid, err)
+	case errors.Is(err, app_order.ErrCheckoutItemEmpty):
+		return app_error.New(app_error.KindValidation, errCodeCheckoutItemEmpty, errMsgCheckoutItemEmpty, err)
 	case errors.Is(err, app_order.ErrCheckoutItemUnavailable):
 		return app_error.New(app_error.KindConflict, errCodeCheckoutItemUnavailable, errMsgCheckoutItemUnavailable, err)
 	case errors.Is(err, app_order.ErrOrderShopMismatch):

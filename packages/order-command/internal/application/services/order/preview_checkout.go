@@ -12,8 +12,12 @@ func (s *orderService) PreviewCheckout(ctx context.Context, cmd preview_checkout
 	for _, item := range cmd.Items {
 		baseItems = append(baseItems, checkoutLineInput{SkuID: item.SkuID, Quantity: item.Quantity})
 	}
+	normalizedItems, err := normalizeCheckoutItems(baseItems)
+	if err != nil {
+		return nil, err
+	}
 
-	calcResult, err := s.calculateCheckoutPreview(baseItems, checkoutCtx.ProductSkus, checkoutCtx.SkuStocks)
+	calcResult, err := s.calculateCheckoutPreview(normalizedItems, checkoutCtx.ProductSkus, checkoutCtx.SkuStocks)
 	if err != nil {
 		return nil, err
 	}
@@ -24,7 +28,7 @@ func (s *orderService) PreviewCheckout(ctx context.Context, cmd preview_checkout
 		}
 	}
 
-	previewDetails := make([]preview_checkout.PreviewItemDetail, 0, len(cmd.Items))
+	previewDetails := make([]preview_checkout.PreviewItemDetail, 0, len(calcResult.Lines))
 	for _, item := range calcResult.Lines {
 		previewDetails = append(previewDetails, preview_checkout.PreviewItemDetail{
 			ShopID:      cmd.ShopID,
