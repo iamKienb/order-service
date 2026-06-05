@@ -4,6 +4,8 @@ import (
 	"log/slog"
 	"net/http"
 
+	orderadapter "order-query-module/internal/adapter/order"
+
 	"connectrpc.com/connect"
 	"connectrpc.com/grpcreflect"
 	"github.com/iamKienb/api-contract/gen/order/orderconnect"
@@ -37,7 +39,12 @@ func NewAdapterModule(app *ApplicationModule, logger *slog.Logger) *AdapterModul
 	allInterceptors := connect.WithInterceptors(interceptors...)
 	mux := http.NewServeMux()
 	reflector := grpcreflect.NewStaticReflector(orderconnect.OrderQueryName)
-	orderQueryServer := orderconnect.UnimplementedOrderQueryHandler{}
+	orderQueryServer := orderadapter.NewQueryServer(
+		app.GetOrderDetailExecutor,
+		app.ListBuyerOrdersExecutor,
+		app.ListShopOrdersExecutor,
+		app.SearchOrdersExecutor,
+	)
 
 	mux.Handle(orderconnect.NewOrderQueryHandler(orderQueryServer, allInterceptors))
 	mux.Handle(grpcreflect.NewHandlerV1(reflector))

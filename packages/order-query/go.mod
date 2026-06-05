@@ -5,7 +5,8 @@ go 1.25.8
 require (
 	connectrpc.com/connect v1.19.2
 	connectrpc.com/grpcreflect v1.3.0
-	github.com/iamKienb/api-contract v0.2.11
+	github.com/elastic/go-elasticsearch/v8 v8.19.5
+	github.com/iamKienb/api-contract v0.2.13
 	github.com/iamKienb/go-core v0.4.7
 	golang.org/x/net v0.52.0
 )
@@ -15,7 +16,6 @@ require (
 	github.com/caarlos0/env/v11 v11.4.0 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/elastic/elastic-transport-go/v8 v8.9.0 // indirect
-	github.com/elastic/go-elasticsearch/v8 v8.19.5 // indirect
 	github.com/envoyproxy/protoc-gen-validate v1.3.3 // indirect
 	github.com/go-logr/logr v1.4.3 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
