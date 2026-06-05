@@ -7,6 +7,7 @@ import (
 	"order-command-module/internal/application/commands/cancel_order"
 	"order-command-module/internal/infra/temporal/workflow"
 
+	enumspb "go.temporal.io/api/enums/v1"
 	"go.temporal.io/sdk/client"
 )
 
@@ -16,8 +17,10 @@ type CancelOrderRunner interface {
 
 func (r *workflowRunner) CancelOrder(ctx context.Context, cmd cancel_order.Command) (*cancel_order.Result, error) {
 	run, err := r.temporalClient.ExecuteWorkflow(ctx, client.StartWorkflowOptions{
-		ID:        fmt.Sprintf("cancel-order-%s", cmd.OrderID),
-		TaskQueue: r.temporalCfg.OrderTaskQueue,
+		ID:                       fmt.Sprintf("cancel-order-%s", cmd.OrderID),
+		TaskQueue:                r.temporalCfg.OrderTaskQueue,
+		WorkflowIDConflictPolicy: enumspb.WORKFLOW_ID_CONFLICT_POLICY_USE_EXISTING,
+		WorkflowIDReusePolicy:    enumspb.WORKFLOW_ID_REUSE_POLICY_REJECT_DUPLICATE,
 	}, workflow.CancelOrderWorkflow, cmd, r.temporalCfg)
 	if err != nil {
 		return nil, err

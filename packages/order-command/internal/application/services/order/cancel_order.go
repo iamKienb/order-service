@@ -13,6 +13,9 @@ func (s *orderService) CancelOrder(ctx context.Context, cmd cancel_order.Command
 	if err != nil {
 		return nil, err
 	}
+	if existing.Status == domain_order.StatusCancelled {
+		return &cancel_order.Result{OrderID: existing.ID, Status: string(domain_order.StatusCancelled)}, nil
+	}
 
 	expectedStatus := existing.Status
 	actorID := cmd.ActorID
