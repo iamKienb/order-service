@@ -1,8 +1,12 @@
 package order
 
+import (
+	domain_order "order-command-module/internal/domain/order"
+)
+
 func normalizeCheckoutItems(items []checkoutLineInput) ([]checkoutLineInput, error) {
 	if len(items) == 0 {
-		return nil, ErrCheckoutItemEmpty
+		return nil, domain_order.ErrCheckoutItemEmpty
 	}
 
 	quantitiesBySku := make(map[string]int64, len(items))
@@ -11,7 +15,7 @@ func normalizeCheckoutItems(items []checkoutLineInput) ([]checkoutLineInput, err
 
 	for _, item := range items {
 		if item.Quantity <= 0 {
-			return nil, ErrCheckoutItemInvalid
+			return nil, domain_order.ErrCheckoutItemInvalid
 		}
 
 		skuID := item.SkuID.String()

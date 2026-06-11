@@ -39,84 +39,88 @@ func NewOrderServer(
 }
 
 func (s *orderServer) PreviewCheckout(ctx context.Context, req *connect.Request[orderpb.PreviewCheckoutRequest]) (*connect.Response[orderpb.PreviewCheckoutResponse], error) {
-	if err := requireAuthenticatedRequest(ctx); err != nil {
+	currentUser, err := requireCurrentUser(ctx)
+	if err != nil {
 		return nil, err
 	}
 
-	cmd, err := ToPreviewCheckoutCommand(req.Msg)
+	cmd, err := ToPreviewCheckoutCommand(currentUser, req.Msg)
 	if err != nil {
 		return nil, err
 	}
 
 	result, err := s.previewCheckoutExecutor.Execute(ctx, cmd)
 	if err != nil {
-		return nil, mapError(err)
+		return nil, toApplicationError(err)
 	}
 
 	return connect.NewResponse(ToPreviewCheckoutResponse(cmd.ShopID.String(), result)), nil
 }
 
 func (s *orderServer) PlaceOrder(ctx context.Context, req *connect.Request[orderpb.PlaceOrderRequest]) (*connect.Response[orderpb.PlaceOrderResponse], error) {
-	if err := requireAuthenticatedRequest(ctx); err != nil {
+	currentUser, err := requireCurrentUser(ctx)
+	if err != nil {
 		return nil, err
 	}
 
-	cmd, err := ToPlaceOrderCommand(req.Msg)
+	cmd, err := ToPlaceOrderCommand(currentUser, req.Msg)
 	if err != nil {
 		return nil, err
 	}
 
 	result, err := s.placeOrderExecutor.Execute(ctx, cmd)
 	if err != nil {
-		return nil, mapError(err)
+		return nil, toApplicationError(err)
 	}
 
 	return connect.NewResponse(ToPlaceOrderResponse(result)), nil
 }
 
 func (s *orderServer) CancelOrder(ctx context.Context, req *connect.Request[orderpb.CancelOrderRequest]) (*connect.Response[orderpb.CancelOrderResponse], error) {
-	if err := requireAuthenticatedRequest(ctx); err != nil {
+	currentUser, err := requireCurrentUser(ctx)
+	if err != nil {
 		return nil, err
 	}
 
-	cmd, err := ToCancelOrderCommand(req.Msg)
+	cmd, err := ToCancelOrderCommand(currentUser, req.Msg)
 	if err != nil {
 		return nil, err
 	}
 
 	result, err := s.cancelOrderExecutor.Execute(ctx, cmd)
 	if err != nil {
-		return nil, mapError(err)
+		return nil, toApplicationError(err)
 	}
 
 	return connect.NewResponse(ToCancelOrderResponse(result)), nil
 }
 
 func (s *orderServer) ConfirmOrder(ctx context.Context, req *connect.Request[orderpb.ConfirmOrderRequest]) (*connect.Response[orderpb.ConfirmOrderResponse], error) {
-	if err := requireAuthenticatedRequest(ctx); err != nil {
+	currentUser, err := requireCurrentUser(ctx)
+	if err != nil {
 		return nil, err
 	}
 
-	cmd, err := ToConfirmOrderCommand(req.Msg)
+	cmd, err := ToConfirmOrderCommand(currentUser, req.Msg)
 	if err != nil {
 		return nil, err
 	}
 
 	result, err := s.confirmOrderExecutor.Execute(ctx, cmd)
 	if err != nil {
-		return nil, mapError(err)
+		return nil, toApplicationError(err)
 	}
 
 	return connect.NewResponse(ToConfirmOrderResponse(result)), nil
 }
 
-func requireAuthenticatedRequest(ctx context.Context) error {
+func requireCurrentUser(ctx context.Context) (string, error) {
 	claims := authx.GetUserInfoFromCtx(ctx)
 	if claims == nil || claims.UserID == "" {
-		return app_error.Unauthorized(errMsgAuthenticationRequired)
+		return "", app_error.Unauthorized("authentication required")
 	}
 
-	return nil
+	return claims.UserID, nil
 }
 
 var _ orderconnect.OrderCommandHandler = (*orderServer)(nil)

@@ -31,6 +31,7 @@ type OrderActivity struct {
 type ReserveStockCommand struct {
 	ShopID  string
 	OrderID string
+	BuyerID string
 	Items   []place_order.ReserveItem
 }
 
@@ -113,16 +114,17 @@ func (a *OrderActivity) ReserveStock(ctx context.Context, cmd ReserveStockComman
 	return a.inventoryClient.ReserveStock(ctx, port.ReserveStockRequest{
 		ShopID:  cmd.ShopID,
 		OrderID: cmd.OrderID,
+		BuyerID: cmd.BuyerID,
 		Items:   items,
 	})
 }
 
-func (a *OrderActivity) ReleaseStock(ctx context.Context, orderID string) error {
-	return a.inventoryClient.ReleaseStock(ctx, orderID)
+func (a *OrderActivity) ReleaseStock(ctx context.Context, param port.ReleaseAndFullfilStockParam) error {
+	return a.inventoryClient.ReleaseStock(ctx, param)
 }
 
-func (a *OrderActivity) FulfillStock(ctx context.Context, orderID string) error {
-	return a.inventoryClient.FulfillStock(ctx, orderID)
+func (a *OrderActivity) FulfillStock(ctx context.Context, param port.ReleaseAndFullfilStockParam) error {
+	return a.inventoryClient.FulfillStock(ctx, param)
 }
 
 func (a *OrderActivity) checkoutContext(ctx context.Context, cmd place_order.Command) (*preview_checkout.CheckoutContext, error) {

@@ -14,7 +14,7 @@ func (s *orderService) ConfirmOrder(ctx context.Context, cmd confirm_order.Comma
 		return nil, err
 	}
 	if existing.ShopID != cmd.ShopID {
-		return nil, ErrOrderShopMismatch
+		return nil, domain_order.ErrOrderShopMismatch
 	}
 	if existing.Status == domain_order.StatusConfirmed {
 		return &confirm_order.Result{OrderID: existing.ID, Status: string(domain_order.StatusConfirmed)}, nil

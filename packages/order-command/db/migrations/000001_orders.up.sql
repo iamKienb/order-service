@@ -9,9 +9,9 @@ CREATE TABLE orders (
     shipping_address    TEXT         NOT NULL,
     shipping_province   VARCHAR(100) NOT NULL,
     shipping_ward       VARCHAR(100) NOT NULL,
-    note                TEXT, -- Ghi chú của khách khi đặt hàng
+    note                TEXT,
 
-    grand_total         BIGINT NOT NULL DEFAULT 0,       -- Số tiền cuối cùng khách phải trả
+    grand_total         BIGINT NOT NULL DEFAULT 0,
     currency            VARCHAR(10)  NOT NULL DEFAULT 'VND',
 
     cancel_reason       TEXT,                            

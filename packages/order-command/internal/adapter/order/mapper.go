@@ -7,6 +7,7 @@ import (
 	"order-command-module/internal/application/commands/confirm_order"
 	"order-command-module/internal/application/commands/place_order"
 	"order-command-module/internal/application/commands/preview_checkout"
+	"order-command-module/internal/application/services/order/i18n"
 	domain_order "order-command-module/internal/domain/order"
 	"order-command-module/internal/domain/shared"
 
@@ -14,36 +15,18 @@ import (
 	"github.com/iamKienb/go-core/app_error"
 )
 
-const (
-	errCodeBuyerInvalid       = "buyer_invalid"
-	errCodeUserAddressInvalid = "user_address_invalid"
-	errCodeShopInvalid        = "shop_invalid"
-	errCodeSkuInvalid         = "sku_invalid"
-	errCodeActorInvalid       = "actor_invalid"
-	errCodeIdempotencyInvalid = "idempotency_key_invalid"
-	errCodeQuantityInvalid    = "quantity_invalid"
-
-	errMsgBuyerInvalid       = "invalid buyer id"
-	errMsgUserAddressInvalid = "invalid user address id"
-	errMsgShopInvalid        = "invalid shop id"
-	errMsgSkuInvalid         = "invalid sku id"
-	errMsgActorInvalid       = "invalid actor id"
-	errMsgIdempotencyInvalid = "invalid idempotency key"
-	errMsgQuantityInvalid    = "invalid quantity"
-)
-
-func ToPreviewCheckoutCommand(req *orderpb.PreviewCheckoutRequest) (preview_checkout.Command, error) {
-	buyerID, err := parseID[shared.UserID](req.GetBuyerId(), errCodeBuyerInvalid, errMsgBuyerInvalid)
+func ToPreviewCheckoutCommand(userID string, req *orderpb.PreviewCheckoutRequest) (preview_checkout.Command, error) {
+	addressID, err := parseUserAddressID(req.GetAddressUserId())
 	if err != nil {
 		return preview_checkout.Command{}, err
 	}
 
-	addressID, err := parseID[shared.UserAddressID](req.GetAddressUserId(), errCodeUserAddressInvalid, errMsgUserAddressInvalid)
+	buyerID, err := parseUserID(userID)
 	if err != nil {
 		return preview_checkout.Command{}, err
 	}
 
-	shopID, err := parseID[shared.ShopID](req.GetShopId(), errCodeShopInvalid, errMsgShopInvalid)
+	parsedShopID, err := parseShopID(req.GetShopId())
 	if err != nil {
 		return preview_checkout.Command{}, err
 	}
@@ -54,7 +37,7 @@ func ToPreviewCheckoutCommand(req *orderpb.PreviewCheckoutRequest) (preview_chec
 	}
 
 	return preview_checkout.Command{
-		ShopID:         shopID,
+		ShopID:         parsedShopID,
 		BuyerID:        buyerID,
 		BuyerAddressID: addressID,
 		Items:          items,
@@ -83,34 +66,34 @@ func ToPreviewCheckoutResponse(shopID string, result *preview_checkout.Result) *
 	}
 }
 
-func ToPlaceOrderCommand(req *orderpb.PlaceOrderRequest) (place_order.Command, error) {
-	buyerID, err := parseID[shared.UserID](req.GetBuyerId(), errCodeBuyerInvalid, errMsgBuyerInvalid)
+func ToPlaceOrderCommand(userID string, req *orderpb.PlaceOrderRequest) (place_order.Command, error) {
+	addressID, err := parseUserAddressID(req.GetAddressUserId())
 	if err != nil {
 		return place_order.Command{}, err
 	}
 
-	addressID, err := parseID[shared.UserAddressID](req.GetAddressUserId(), errCodeUserAddressInvalid, errMsgUserAddressInvalid)
+	buyerID, err := parseUserID(userID)
 	if err != nil {
 		return place_order.Command{}, err
 	}
 
-	shopID, err := parseID[shared.ShopID](req.GetShopId(), errCodeShopInvalid, errMsgShopInvalid)
+	parsedShopID, err := parseShopID(req.GetShopId())
 	if err != nil {
 		return place_order.Command{}, err
 	}
 
 	idempotencyKey := strings.TrimSpace(req.GetIdempotencyKey())
 	if idempotencyKey == "" {
-		return place_order.Command{}, app_error.New(app_error.KindValidation, errCodeIdempotencyInvalid, errMsgIdempotencyInvalid, nil)
+		return place_order.Command{}, app_error.New(app_error.KindValidation, "", i18n.MsgOrderIdempotencyMissing, domain_order.ErrOrderIdempotencyMissing)
 	}
 
 	items := make([]place_order.Item, 0, len(req.GetItems()))
 	for _, item := range req.GetItems() {
 		if item.GetQuantity() <= 0 {
-			return place_order.Command{}, app_error.New(app_error.KindValidation, errCodeQuantityInvalid, errMsgQuantityInvalid, nil)
+			return place_order.Command{}, app_error.New(app_error.KindValidation, "", i18n.MsgInventoryQuantityInvalid, nil)
 		}
 
-		skuID, err := parseID[shared.SkuID](item.GetSkuId(), errCodeSkuInvalid, errMsgSkuInvalid)
+		skuID, err := parseSkuID(item.GetSkuId())
 		if err != nil {
 			return place_order.Command{}, err
 		}
@@ -123,7 +106,7 @@ func ToPlaceOrderCommand(req *orderpb.PlaceOrderRequest) (place_order.Command, e
 	}
 
 	return place_order.Command{
-		ShopID:         shopID,
+		ShopID:         parsedShopID,
 		BuyerID:        buyerID,
 		BuyerAddressID: addressID,
 		IdempotencyKey: idempotencyKey,
@@ -143,8 +126,8 @@ func ToPlaceOrderResponse(result *place_order.Result) *orderpb.PlaceOrderRespons
 	}
 }
 
-func ToCancelOrderCommand(req *orderpb.CancelOrderRequest) (cancel_order.Command, error) {
-	actorID, err := parseID[shared.UserID](req.GetActorId(), errCodeActorInvalid, errMsgActorInvalid)
+func ToCancelOrderCommand(userID string, req *orderpb.CancelOrderRequest) (cancel_order.Command, error) {
+	actorID, err := parseUserID(userID)
 	if err != nil {
 		return cancel_order.Command{}, err
 	}
@@ -165,13 +148,13 @@ func ToCancelOrderResponse(result *cancel_order.Result) *orderpb.CancelOrderResp
 	}
 }
 
-func ToConfirmOrderCommand(req *orderpb.ConfirmOrderRequest) (confirm_order.Command, error) {
-	shopID, err := parseID[shared.ShopID](req.GetShopId(), errCodeShopInvalid, errMsgShopInvalid)
+func ToConfirmOrderCommand(userID string, req *orderpb.ConfirmOrderRequest) (confirm_order.Command, error) {
+	actorID, err := parseUserID(userID)
 	if err != nil {
 		return confirm_order.Command{}, err
 	}
 
-	actorID, err := parseID[shared.UserID](req.GetActorId(), errCodeActorInvalid, errMsgActorInvalid)
+	shopID, err := parseShopID(req.GetShopId())
 	if err != nil {
 		return confirm_order.Command{}, err
 	}
@@ -194,10 +177,10 @@ func toPreviewItems(items []*orderpb.CheckoutItem) ([]preview_checkout.Item, err
 	result := make([]preview_checkout.Item, 0, len(items))
 	for _, item := range items {
 		if item.GetQuantity() <= 0 {
-			return nil, app_error.New(app_error.KindValidation, errCodeQuantityInvalid, errMsgQuantityInvalid, nil)
+			return nil, app_error.New(app_error.KindValidation, "", i18n.MsgInventoryQuantityInvalid, nil)
 		}
 
-		skuID, err := parseID[shared.SkuID](item.GetSkuId(), errCodeSkuInvalid, errMsgSkuInvalid)
+		skuID, err := parseSkuID(item.GetSkuId())
 		if err != nil {
 			return nil, err
 		}
@@ -211,10 +194,46 @@ func toPreviewItems(items []*orderpb.CheckoutItem) ([]preview_checkout.Item, err
 	return result, nil
 }
 
-func parseID[T ~[16]byte](value, code, message string) (T, error) {
-	parsed, err := shared.ParseToRawID[T](value)
+func parseUserID(value string) (shared.UserID, error) {
+	parsed, err := shared.ParseToRawID[shared.UserID](value)
 	if err != nil {
-		return parsed, app_error.New(app_error.KindValidation, code, message, err)
+		return parsed, app_error.New(app_error.KindValidation, "user_invalid", "invalid user id", err)
+	}
+
+	return parsed, nil
+}
+
+func parseUserAddressID(value string) (shared.UserAddressID, error) {
+	parsed, err := shared.ParseToRawID[shared.UserAddressID](value)
+	if err != nil {
+		return parsed, app_error.New(app_error.KindValidation, "user_address_invalid", "invalid user address id", err)
+	}
+
+	return parsed, nil
+}
+
+func parseShopID(value string) (shared.ShopID, error) {
+	parsed, err := shared.ParseToRawID[shared.ShopID](value)
+	if err != nil {
+		return parsed, app_error.New(app_error.KindValidation, "shop_invalid", "invalid shop id", err)
+	}
+
+	return parsed, nil
+}
+
+func parseSkuID(value string) (shared.SkuID, error) {
+	parsed, err := shared.ParseToRawID[shared.SkuID](value)
+	if err != nil {
+		return parsed, app_error.New(app_error.KindValidation, "sku_invalid", "invalid sku id", err)
+	}
+
+	return parsed, nil
+}
+
+func parseInventoryID(value string) (shared.InventoryID, error) {
+	parsed, err := shared.ParseToRawID[shared.InventoryID](value)
+	if err != nil {
+		return parsed, app_error.New(app_error.KindValidation, "inventory_invalid", "invalid inventory id", err)
 	}
 
 	return parsed, nil

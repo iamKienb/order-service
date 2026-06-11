@@ -20,6 +20,7 @@ func PlaceOrderWorkflow(ctx workflow.Context, cmd place_order.Command, cfg confi
 	if err := workflow.ExecuteActivity(activityCtx, orderAct.CreateOrder, cmd).Get(ctx, &result); err != nil {
 		return nil, fmt.Errorf("create order: %w", err)
 	}
+
 	if result.Status != string(domain_order.StatusPending) {
 		return &result, nil
 	}
@@ -27,8 +28,10 @@ func PlaceOrderWorkflow(ctx workflow.Context, cmd place_order.Command, cfg confi
 	reserveCmd := activity.ReserveStockCommand{
 		ShopID:  cmd.ShopID.String(),
 		OrderID: result.OrderID,
+		BuyerID: cmd.BuyerID.String(),
 		Items:   result.ReserveItems,
 	}
+
 	if err := workflow.ExecuteActivity(activityCtx, orderAct.ReserveStock, reserveCmd).Get(ctx, nil); err != nil {
 		disconnectedCtx, _ := workflow.NewDisconnectedContext(rollbackCtx)
 		_ = workflow.ExecuteActivity(disconnectedCtx, orderAct.CancelPlacedOrder, result.OrderID).Get(disconnectedCtx, nil)

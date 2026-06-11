@@ -62,17 +62,26 @@ func (c *inventoryClient) ReserveStock(ctx context.Context, req port.ReserveStoc
 	_, err := c.client.ReserveStock(ctx, connect.NewRequest(&inventory.ReserveStockRequest{
 		ShopId:  req.ShopID,
 		OrderId: req.OrderID,
+		ActorId: req.BuyerID,
 		Items:   items,
 	}))
 	return err
 }
 
-func (c *inventoryClient) ReleaseStock(ctx context.Context, orderID string) error {
-	_, err := c.client.ReleaseStock(ctx, connect.NewRequest(&inventory.ReleaseStockRequest{OrderId: orderID}))
+func (c *inventoryClient) ReleaseStock(ctx context.Context, param port.ReleaseAndFullfilStockParam) error {
+	_, err := c.client.ReleaseStock(ctx, connect.NewRequest(&inventory.ReleaseStockRequest{
+		OrderId: param.OrderID,
+		ActorId: param.ActorID,
+	}))
+
 	return err
 }
 
-func (c *inventoryClient) FulfillStock(ctx context.Context, orderID string) error {
-	_, err := c.client.FulfillStock(ctx, connect.NewRequest(&inventory.FulfillStockRequest{OrderId: orderID}))
+func (c *inventoryClient) FulfillStock(ctx context.Context, param port.ReleaseAndFullfilStockParam) error {
+	_, err := c.client.FulfillStock(ctx, connect.NewRequest(&inventory.FulfillStockRequest{
+		OrderId: param.OrderID,
+		ActorId: param.ActorID,
+	}))
+
 	return err
 }

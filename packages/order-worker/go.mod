@@ -4,12 +4,14 @@ go 1.25.8
 
 require (
 	github.com/elastic/go-elasticsearch/v8 v8.19.5
-	github.com/iamKienb/go-core v0.4.7
+	github.com/iamKienb/go-core v1.3.0
+	github.com/redis/go-redis/v9 v9.17.3
 )
 
 require (
 	github.com/caarlos0/env/v11 v11.4.0 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
+	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
 	github.com/elastic/elastic-transport-go/v8 v8.9.0 // indirect
 	github.com/go-logr/logr v1.4.3 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect

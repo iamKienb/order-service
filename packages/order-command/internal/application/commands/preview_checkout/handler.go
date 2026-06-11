@@ -39,7 +39,7 @@ func NewHandler(
 }
 
 func (h *handler) Execute(ctx context.Context, cmd Command) (*Result, error) {
-	group, ctx := errgroup.WithContext(ctx)
+	group, _ := errgroup.WithContext(ctx)
 
 	var productSkus []*port.ProductSkuDetail
 	var skuStocks []*port.SkuStock

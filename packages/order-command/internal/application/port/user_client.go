@@ -15,9 +15,9 @@ type UserAddress struct {
 	UserID        shared.UserID
 	ReceiverName  string
 	PhoneNumber   string
-	ProvinceID    int
+	ProvinceID    string
 	ProvinceName  string
-	WardID        int
+	WardID        string
 	WardName      string
 	AddressLine   string
 	Label         string

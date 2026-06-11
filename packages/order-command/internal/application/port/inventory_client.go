@@ -16,16 +16,22 @@ type SkuStock struct {
 	AvailableQuantity int64
 }
 
+type ReleaseAndFullfilStockParam struct {
+	OrderID string
+	ActorID string
+}
+
 type InventoryClient interface {
 	GetStockBySkuIDs(ctx context.Context, req GetStockBySkuIDsRequest) ([]*SkuStock, error)
 	ReserveStock(ctx context.Context, req ReserveStockRequest) error
-	ReleaseStock(ctx context.Context, orderID string) error
-	FulfillStock(ctx context.Context, orderID string) error
+	ReleaseStock(ctx context.Context, param ReleaseAndFullfilStockParam) error
+	FulfillStock(ctx context.Context, param ReleaseAndFullfilStockParam) error
 }
 
 type ReserveStockRequest struct {
 	ShopID  string
 	OrderID string
+	BuyerID string
 	Items   []ReserveStockItem
 }
 

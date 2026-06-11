@@ -55,6 +55,7 @@ func (c *productClient) GetProductBySkuIDs(ctx context.Context, req port.GetProd
 			Status:      item.GetStatus(),
 		})
 	}
+
 	return result, nil
 }
 
@@ -63,9 +64,11 @@ func (c *productClient) GetPriceSkusByIDs(ctx context.Context, req port.GetPrice
 	if err != nil {
 		return nil, err
 	}
+
 	result := make([]*port.SkuPriceItem, 0, len(productSkus))
 	for _, sku := range productSkus {
 		result = append(result, &port.SkuPriceItem{SkuID: sku.SkuID, Price: sku.Price})
 	}
+
 	return result, nil
 }

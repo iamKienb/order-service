@@ -6,8 +6,8 @@ require (
 	connectrpc.com/connect v1.19.2
 	connectrpc.com/grpcreflect v1.3.0
 	github.com/google/uuid v1.6.0
-	github.com/iamKienb/api-contract v0.2.14
-	github.com/iamKienb/go-core v0.4.7
+	github.com/iamKienb/api-contract v0.3.8
+	github.com/iamKienb/go-core v1.3.0
 	github.com/jackc/pgx/v5 v5.9.1
 	go.temporal.io/api v1.54.0
 	go.temporal.io/sdk v1.38.0

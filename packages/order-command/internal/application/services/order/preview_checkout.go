@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"order-command-module/internal/application/commands/preview_checkout"
+	domain_order "order-command-module/internal/domain/order"
 )
 
 func (s *orderService) PreviewCheckout(ctx context.Context, cmd preview_checkout.Command, checkoutCtx preview_checkout.CheckoutContext) (*preview_checkout.Result, error) {
@@ -23,7 +24,7 @@ func (s *orderService) PreviewCheckout(ctx context.Context, cmd preview_checkout
 
 	for _, item := range calcResult.Lines {
 		if item.AvailableQuantity < item.Quantity {
-			return nil, ErrCheckoutItemUnavailable
+			return nil, domain_order.ErrCheckoutItemUnavailable
 		}
 	}
 

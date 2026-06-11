@@ -7,6 +7,7 @@ import (
 	"order-command-module/internal/application/commands/cancel_order"
 	"order-command-module/internal/infra/temporal/workflow"
 
+	authx "github.com/iamKienb/go-core/middleware/auth"
 	enumspb "go.temporal.io/api/enums/v1"
 	"go.temporal.io/sdk/client"
 )
@@ -16,8 +17,9 @@ type CancelOrderRunner interface {
 }
 
 func (r *workflowRunner) CancelOrder(ctx context.Context, cmd cancel_order.Command) (*cancel_order.Result, error) {
+	requestID := authx.GetRequestID(ctx)
 	run, err := r.temporalClient.ExecuteWorkflow(ctx, client.StartWorkflowOptions{
-		ID:                       fmt.Sprintf("cancel-order-%s", cmd.OrderID),
+		ID:                       fmt.Sprintf("cancel-order-%s-%s", cmd.OrderID, requestID),
 		TaskQueue:                r.temporalCfg.OrderTaskQueue,
 		WorkflowIDConflictPolicy: enumspb.WORKFLOW_ID_CONFLICT_POLICY_USE_EXISTING,
 		WorkflowIDReusePolicy:    enumspb.WORKFLOW_ID_REUSE_POLICY_REJECT_DUPLICATE,

@@ -46,7 +46,7 @@ func NewQueryService(esService esx.ESXService) QueryService {
 func (s *queryService) GetOrderDetail(ctx context.Context, query get_order_detail.Query) (*get_order_detail.Result, error) {
 	searchQuery := NewQueryBuilder().
 		WithPagination(0, 1).
-		FilterTerm("order_id", query.OrderID).
+		FilterTerm("id", query.OrderID).
 		Build()
 
 	result, err := SearchDocuments[models.Order](ctx, s.esClient, s.index, searchQuery)
@@ -67,7 +67,7 @@ func (s *queryService) ListBuyerOrders(ctx context.Context, query list_buyer_ord
 		FilterTerm("buyer_id", query.BuyerID).
 		FilterTerm("status", query.Status).
 		WithSort("created_at", sortDesc).
-		WithSort("order_id", sortAsc)
+		WithSort("id", sortAsc)
 
 	return s.searchPage(ctx, builder.Build(), page)
 }
@@ -79,7 +79,7 @@ func (s *queryService) ListShopOrders(ctx context.Context, query list_shop_order
 		FilterTerm("shop_id", query.ShopID).
 		FilterTerm("status", query.Status).
 		WithSort("created_at", sortDesc).
-		WithSort("order_id", sortAsc)
+		WithSort("id", sortAsc)
 
 	return s.searchPage(ctx, builder.Build(), page)
 }

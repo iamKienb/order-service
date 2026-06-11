@@ -6,7 +6,7 @@ type Page struct {
 }
 
 type Order struct {
-	OrderID     string      `json:"order_id"`
+	OrderID     string      `json:"id"`
 	ShopID      string      `json:"shop_id"`
 	BuyerID     string      `json:"buyer_id"`
 	Status      string      `json:"status"`

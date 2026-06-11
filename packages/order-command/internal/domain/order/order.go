@@ -169,7 +169,7 @@ func (o *Order) Confirm(actorID shared.UserID) error {
 
 func (o *Order) Cancel(params CancelParams) error {
 	if o.Status == StatusCompleted || o.Status == StatusCancelled || o.Status == StatusDelivered {
-		return ErrOrderCannotCancel
+		return ErrOrderCannotCancelInCurrentState
 	}
 
 	switch params.ActorType {

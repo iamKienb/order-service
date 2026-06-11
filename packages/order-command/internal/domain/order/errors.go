@@ -3,18 +3,22 @@ package order
 import "errors"
 
 var (
-	ErrOrderInvalidGrandTotal          = errors.New("ORDER_INVALID_GRAND_TOTAL")
-	ErrOrderCannotCancelInCurrentState = errors.New("ORDER_CANNOT_CANCEL_IN_CURRENT_STATE")
-	ErrOrderInvalidStateTransition     = errors.New("ORDER_INVALID_STATE_TRANSITION")
-	ErrOrderItemsCannotBeEmpty         = errors.New("ORDER_ITEMS_CANNOT_BE_EMPTY")
-	ErrOrderItemInvalidCalculation     = errors.New("ORDER_ITEM_INVALID_CALCULATION")
-	ErrOrderCurrencyMismatch           = errors.New("ORDER_CURRENCY_MISMATCH")
 	ErrOrderNotFound                   = errors.New("ORDER_NOT_FOUND")
+	ErrOrderInvalidGrandTotal          = errors.New("ORDER_INVALID_GRAND_TOTAL")
+	ErrOrderInvalidStateTransition     = errors.New("ORDER_INVALID_STATE_TRANSITION")
+	ErrOrderCannotCancelInCurrentState = errors.New("ORDER_CANNOT_CANCEL_IN_CURRENT_STATE")
+	ErrOrderCurrencyMismatch           = errors.New("ORDER_CURRENCY_MISMATCH")
 	ErrOrderIdempotencyKeyConflict     = errors.New("ORDER_IDEMPOTENCY_KEY_CONFLICT")
 
-	ErrOrderCannotCancel     = errors.New("order_cannot_cancel_in_current_status")
-	ErrOrderBuyerNotAllowed  = errors.New("buyer_cannot_cancel_once_confirmed")
-	ErrOrderShopNotAllowed   = errors.New("shop_cannot_cancel_once_shipped")
-	ErrOrderActorIDRequired  = errors.New("actor_id_is_required")
-	ErrOrderInvalidActorType = errors.New("invalid_actor_type")
+	ErrOrderActorIDRequired  = errors.New("ORDER_ACTOR_ID_REQUIRED")
+	ErrOrderInvalidActorType = errors.New("ORDER_INVALID_ACTOR_TYPE")
+	ErrOrderBuyerNotAllowed  = errors.New("ORDER_BUYER_NOT_ALLOWED")
+	ErrOrderShopNotAllowed   = errors.New("ORDER_SHOP_NOT_ALLOWED")
+
+	ErrCheckoutItemEmpty           = errors.New("ORDER_CHECKOUT_ITEM_EMPTY")
+	ErrCheckoutItemInvalid         = errors.New("ORDER_CHECKOUT_ITEM_INVALID")
+	ErrCheckoutItemUnavailable     = errors.New("ORDER_CHECKOUT_ITEM_UNAVAILABLE")
+	ErrOrderItemInvalidCalculation = errors.New("ORDER_ITEM_INVALID_CALCULATION")
+	ErrOrderShopMismatch           = errors.New("ORDER_SHOP_MISMATCH")
+	ErrOrderIdempotencyMissing     = errors.New("ORDER_IDEMPOTENCY_KEY_MISSING")
 )

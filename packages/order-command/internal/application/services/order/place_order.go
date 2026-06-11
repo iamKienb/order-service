@@ -59,6 +59,7 @@ func (s *orderService) PlaceOrder(ctx context.Context, cmd place_order.Command, 
 			BasePrice:   item.BasePrice,
 		})
 	}
+
 	newOrder.MarkAsCreated()
 
 	if err := s.txManager.WithTx(ctx, func(ctx context.Context) error {
@@ -72,6 +73,7 @@ func (s *orderService) PlaceOrder(ctx context.Context, cmd place_order.Command, 
 				Events:        events,
 			}})
 		}
+
 		return nil
 	}); err != nil {
 		if errors.Is(err, domain_order.ErrOrderIdempotencyKeyConflict) {
@@ -83,6 +85,7 @@ func (s *orderService) PlaceOrder(ctx context.Context, cmd place_order.Command, 
 				return placeOrderResultFromOrder(existing), nil
 			}
 		}
+
 		return nil, err
 	}
 
@@ -101,7 +104,7 @@ func (s *orderService) FindExistingPlaceOrder(ctx context.Context, cmd place_ord
 func normalizePlaceOrderRequest(cmd place_order.Command) (string, []checkoutLineInput, error) {
 	idempotencyKey := strings.TrimSpace(cmd.IdempotencyKey)
 	if idempotencyKey == "" {
-		return "", nil, ErrOrderIdempotencyMissing
+		return "", nil, domain_order.ErrOrderIdempotencyMissing
 	}
 
 	baseItems := make([]checkoutLineInput, 0, len(cmd.Items))
@@ -121,9 +124,11 @@ func (s *orderService) findExistingPlaceOrder(ctx context.Context, cmd place_ord
 	if err != nil {
 		return nil, err
 	}
+
 	if !matchesPlaceOrderRequest(existing, cmd.ShopID, normalizedItems) {
 		return nil, domain_order.ErrOrderIdempotencyKeyConflict
 	}
+
 	return placeOrderResultFromOrder(existing), nil
 }
 
@@ -163,5 +168,6 @@ func matchesPlaceOrderRequest(order *domain_order.Order, shopID domain_shared.Sh
 			return false
 		}
 	}
+
 	return true
 }

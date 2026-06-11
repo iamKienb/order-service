@@ -4,6 +4,7 @@ import (
 	"math"
 
 	"order-command-module/internal/application/port"
+	domain_order "order-command-module/internal/domain/order"
 	domain_shared "order-command-module/internal/domain/shared"
 )
 
@@ -51,7 +52,7 @@ func (s *orderService) calculateOrderPlacement(shopID domain_shared.ShopID, item
 		return nil, err
 	}
 	if result.HasUnavailableLine() {
-		return nil, ErrCheckoutItemUnavailable
+		return nil, domain_order.ErrCheckoutItemUnavailable
 	}
 	return result, nil
 }
@@ -60,7 +61,7 @@ func (s *orderService) buildCheckoutLines(shopID domain_shared.ShopID, items []c
 	stockMap := make(map[domain_shared.SkuID]*port.SkuStock, len(skuStocks))
 	for _, stock := range skuStocks {
 		if _, exists := stockMap[stock.SkuID]; exists {
-			return nil, ErrCheckoutItemInvalid
+			return nil, domain_order.ErrCheckoutItemInvalid
 		}
 		stockMap[stock.SkuID] = stock
 	}
@@ -68,10 +69,10 @@ func (s *orderService) buildCheckoutLines(shopID domain_shared.ShopID, items []c
 	productMap := make(map[domain_shared.SkuID]*port.ProductSkuDetail, len(productSkus))
 	for _, productSku := range productSkus {
 		if productSku.ShopID != shopID || productSku.Status != productSkuStatusActive || productSku.Price < 0 {
-			return nil, ErrCheckoutItemInvalid
+			return nil, domain_order.ErrCheckoutItemInvalid
 		}
 		if _, exists := productMap[productSku.SkuID]; exists {
-			return nil, ErrCheckoutItemInvalid
+			return nil, domain_order.ErrCheckoutItemInvalid
 		}
 		productMap[productSku.SkuID] = productSku
 	}
@@ -81,25 +82,25 @@ func (s *orderService) buildCheckoutLines(shopID domain_shared.ShopID, items []c
 
 	for _, item := range items {
 		if item.Quantity <= 0 {
-			return nil, ErrCheckoutItemInvalid
+			return nil, domain_order.ErrCheckoutItemInvalid
 		}
 
 		productInfo, exists := productMap[item.SkuID]
 		if !exists {
-			return nil, ErrCheckoutItemInvalid
+			return nil, domain_order.ErrCheckoutItemInvalid
 		}
 
 		stockInfo, exists := stockMap[item.SkuID]
 		if !exists {
-			return nil, ErrCheckoutItemInvalid
+			return nil, domain_order.ErrCheckoutItemInvalid
 		}
 		if productInfo.Price > math.MaxInt64/item.Quantity {
-			return nil, ErrCheckoutItemInvalid
+			return nil, domain_order.ErrCheckoutItemInvalid
 		}
 
 		subtotal := productInfo.Price * item.Quantity
 		if grandTotal > math.MaxInt64-subtotal {
-			return nil, ErrCheckoutItemInvalid
+			return nil, domain_order.ErrCheckoutItemInvalid
 		}
 		lines = append(lines, checkoutLine{
 			SkuID:             item.SkuID,
